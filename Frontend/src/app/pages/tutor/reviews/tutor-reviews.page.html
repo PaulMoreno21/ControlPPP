@@ -1,0 +1,97 @@
+<main class="dashboard tutor-reviews-page">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">TUTOR ESPE</span>
+      <h1>Revisiones pendientes</h1>
+      <p>Revisa las actividades enviadas por tus practicantes y registra tu decisión.</p>
+    </div>
+    <button class="secondary-button" type="button" (click)="loadPending()" [disabled]="loading || reviewingId !== null">
+      {{ loading ? 'Actualizando…' : 'Actualizar lista' }}
+    </button>
+  </div>
+
+  @if (successMessage) { <div class="feedback success-feedback" role="status">{{ successMessage }}</div> }
+
+  @if (selectedSubmission; as submission) {
+    <div class="review-backdrop" role="presentation">
+      <section class="review-modal" role="alertdialog" aria-modal="true" aria-labelledby="review-modal-title">
+        <span class="eyebrow">REVISIÓN DE ACTIVIDAD</span>
+        <h2 id="review-modal-title">{{ selectedDecision === 'ACEPTADA' ? 'Aceptar actividad' : 'Rechazar actividad' }}</h2>
+        <p class="review-trainee">{{ submission.traineeName }} <span>· Actividad {{ submission.activityId }}</span></p>
+        <p class="review-description">{{ submission.description }}</p>
+        <p class="review-meta">{{ formatActivityDate(submission.activityDate) }} <span>·</span> {{ submission.durationHours | number:'1.0-2' }} horas</p>
+
+        @if (selectedDecision === 'RECHAZADA') {
+          <label class="observation-field" for="review-observation">Observación del rechazo
+            <textarea id="review-observation" [(ngModel)]="observation" name="observation" rows="4" maxlength="2000" placeholder="Explica qué debe corregirse" [disabled]="reviewingId !== null"></textarea>
+          </label>
+          <small class="field-hint">La observación es obligatoria y se mostrará al practicante.</small>
+        } @else {
+          <p class="accept-hint">La actividad quedará aceptada y sus horas se incluirán en la bitácora.</p>
+        }
+
+        @if (errorMessage) { <p class="modal-error" role="alert">{{ errorMessage }}</p> }
+        <div class="modal-actions">
+          <button class="secondary-button" type="button" (click)="cancelReview()" [disabled]="reviewingId !== null">Cancelar</button>
+          <button class="primary-button" [class.reject-button]="selectedDecision === 'RECHAZADA'" type="button" (click)="confirmReview()" [disabled]="reviewingId !== null">
+            {{ reviewingId === submission.id ? 'Guardando…' : (selectedDecision === 'ACEPTADA' ? 'Confirmar aceptación' : 'Confirmar rechazo') }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <section class="reviews-card" aria-labelledby="reviews-heading">
+    <div class="list-heading">
+      <div><span class="eyebrow">POR REVISAR</span><h2 id="reviews-heading">Actividades enviadas</h2></div>
+      <span class="submission-count">{{ filteredSubmissions.length }} de {{ submissions.length }} {{ submissions.length === 1 ? 'actividad' : 'actividades' }}</span>
+    </div>
+
+    @if (loading) {
+      <div class="empty-state" role="status">Consultando actividades pendientes…</div>
+    } @else if (loadFailed) {
+      <div class="empty-state">
+        <strong>No se pudieron cargar las actividades pendientes</strong>
+        <span>{{ errorMessage }}</span>
+        <button class="primary-button" type="button" (click)="loadPending()">Reintentar</button>
+      </div>
+    } @else if (submissions.length === 0) {
+      <div class="empty-state">
+        <strong>No tienes revisiones pendientes</strong>
+        <span>Las actividades enviadas por tus practicantes aparecerán aquí.</span>
+      </div>
+    } @else {
+      <label class="submission-search" for="submission-filter">Buscar actividad
+        <input id="submission-filter" type="search" [(ngModel)]="search" name="search" placeholder="Nombre del practicante o descripción" [disabled]="reviewingId !== null" />
+      </label>
+
+      @if (filteredSubmissions.length === 0) {
+        <div class="empty-state"><strong>No hay resultados</strong><span>Prueba con otro nombre o texto de la actividad.</span></div>
+      } @else {
+        <div class="submission-list">
+          @for (submission of filteredSubmissions; track submission.id) {
+            <article class="submission-card">
+              <div class="submission-heading">
+                <div><span class="submission-label">{{ submission.traineeName }}</span><h3>Actividad {{ submission.activityId }}</h3></div>
+                <span class="pending-badge">Pendiente</span>
+              </div>
+              <p class="submission-description">{{ submission.description }}</p>
+              <div class="submission-meta">
+                <span><strong>Fecha de actividad</strong>{{ formatActivityDate(submission.activityDate) }}</span>
+                <span><strong>Horas</strong>{{ submission.durationHours | number:'1.0-2' }}</span>
+                <span><strong>Enviada</strong>{{ submission.submittedAt | date:'dd/MM/yyyy HH:mm':'America/Guayaquil' }}</span>
+                <span><strong>Envío</strong>#{{ submission.submissionNumber }}</span>
+              </div>
+              <div class="submission-actions">
+                <button class="reject-button" type="button" (click)="requestReview(submission, 'RECHAZADA')" [disabled]="reviewingId !== null">Rechazar</button>
+                <button class="primary-button" type="button" (click)="requestReview(submission, 'ACEPTADA')" [disabled]="reviewingId !== null">Aceptar</button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    }
+  </section>
+
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

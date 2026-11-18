@@ -1,0 +1,31 @@
+@if (auth.session(); as session) {
+  <main class="dashboard">
+    <div class="page-heading">
+      <div><span class="eyebrow">INICIO</span><h1>Hola, {{ firstName(session.user.name) }}</h1><p>Bienvenido al sistema de bitácora de actividades prácticas preprofesionales.</p></div>
+      <div class="role-chips" aria-label="Roles de la cuenta">@for (role of session.user.roles; track role) { <span class="role-chip">{{ roleLabel(role) }}</span> }</div>
+    </div>
+    <section class="instruction-card"><div class="instruction-heading"><strong>Instrucciones</strong></div><p>{{ welcomeInstruction(session.user.roles) }}</p></section>
+    <div class="section-heading"><div><span class="eyebrow">ACCESOS DE TU CUENTA</span><h2>¿Qué deseas hacer?</h2></div><span class="available-note"><i></i> {{ session.user.roles.length }} {{ session.user.roles.length === 1 ? 'rol activo' : 'roles activos' }}</span></div>
+    <div class="role-panels">
+      @if (hasRole(session.user.roles, 'PRACTICANTE')) {
+        <section class="role-panel"><header><span class="role-icon trainee-icon">P</span><div><h3>Área de practicante</h3><p>Registra y consulta tu práctica.</p></div></header>
+          <div class="shortcut-list">
+            <a class="shortcut shortcut-link" routerLink="/practicante/actividades"><span>Mis actividades</span><small>Consulta fechas, horas y estados</small></a>
+            <a class="shortcut shortcut-link" routerLink="/practicante/actividades/nueva"><span>Crear actividad</span><small>Registra tareas y envíalas a revisión</small></a>
+            <a class="shortcut shortcut-link" routerLink="/practicante/horario"><span>Horario de trabajo</span><small>Registra entrada y revisa tu jornada</small></a>
+          </div>
+        </section>
+      }
+      @if (hasRole(session.user.roles, 'TUTOR_ESPE')) {
+        <section class="role-panel"><header><span class="role-icon tutor-icon">T</span><div><h3>Área de tutor</h3><p>Da seguimiento a tus practicantes asignados.</p></div></header><div class="shortcut-list"><a class="shortcut shortcut-link" routerLink="/tutor/practicantes"><span>Listado de practicantes</span><small>Consulta las personas asignadas a tu cargo y revisa sus actividades</small></a></div></section>
+      }
+      @if (hasRole(session.user.roles, 'ADMIN_LABORATORIO')) {
+        <section class="role-panel"><header><span class="role-icon admin-icon">L</span><div><h3>Administración de laboratorio</h3><p>Gestiona cuentas y asignaciones dentro de tu laboratorio.</p></div></header><div class="shortcut-list"><a class="shortcut shortcut-link" routerLink="/admin/usuarios"><span>Usuarios y roles</span><small>Administra las cuentas de tu laboratorio asignado</small></a><a class="shortcut shortcut-link" routerLink="/admin/asignaciones"><span>Asignaciones</span><small>Vincula practicantes con sus tutores</small></a></div></section>
+      }
+      @if (hasRole(session.user.roles, 'ADMIN_GENERAL')) {
+        <section class="role-panel"><header><span class="role-icon global-admin-icon">G</span><div><h3>Administración general</h3><p>Accesos de alcance global del sistema.</p></div></header><div class="shortcut-list"><a class="shortcut shortcut-link" routerLink="/admin/usuarios"><span>Usuarios</span><small>Crea cuentas y delega uno o varios roles</small></a><a class="shortcut shortcut-link" routerLink="/admin/laboratorios"><span>Laboratorios</span><small>Administra el catálogo de laboratorios</small></a><a class="shortcut shortcut-link" routerLink="/admin/asignaciones"><span>Asignaciones</span><small>Vincula practicantes con tutores</small></a><a class="shortcut shortcut-link" routerLink="/admin/feriados"><span>Feriados</span><small>Gestiona el calendario institucional</small></a><a class="shortcut shortcut-link" routerLink="/admin/auditoria"><span>Auditoría</span><small>Consulta las acciones del sistema</small></a></div></section>
+      }
+    </div>
+    <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+  </main>
+}

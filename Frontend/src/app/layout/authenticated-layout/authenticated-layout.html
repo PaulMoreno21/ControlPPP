@@ -1,0 +1,62 @@
+@if (auth.session(); as session) {
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <a class="institution-brand" routerLink="/inicio" aria-label="ESPE Control PPP, inicio">
+        <img class="brand-logo" src="/assets/logo_espe.png" alt="" />
+      </a>
+
+      <div class="sidebar-date"><strong>{{ currentTime() }}</strong><span>{{ currentDate() }}</span></div>
+      <div class="sidebar-user"><span class="user-avatar" aria-hidden="true">{{ initials(session.user.name) }}</span><div><strong>{{ session.user.name }}</strong><small>{{ session.user.email }}</small></div></div>
+
+      <nav class="menu-list">
+        <p class="menu-caption">MENÚ</p>
+        <a class="menu-item" routerLink="/inicio" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span>Inicio</span></a>
+        @if (hasAnyRole(session.user.roles, ['ADMIN_GENERAL', 'ADMIN_LABORATORIO', 'TUTOR_ESPE', 'PRACTICANTE'])) {
+          <a class="menu-item" routerLink="/reportes" routerLinkActive="active">Reportes</a>
+        }
+        <a class="menu-item" routerLink="/cuenta/seguridad" routerLinkActive="active">Seguridad de cuenta</a>
+        @if (hasRole(session.user.roles, 'PRACTICANTE')) {
+          <p class="menu-group-label">PRACTICANTE</p>
+          <a class="menu-item" routerLink="/practicante/actividades" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Mis actividades</a>
+          <a class="menu-item" routerLink="/practicante/actividades/nueva" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Crear actividad</a>
+          <a class="menu-item" routerLink="/practicante/horario" routerLinkActive="active">Horario de trabajo</a>
+        }
+        @if (hasRole(session.user.roles, 'TUTOR_ESPE')) {
+          <p class="menu-group-label">TUTOR ESPE</p>
+          <a class="menu-item" routerLink="/tutor/practicantes" routerLinkActive="active"><span>Listado de practicantes</span><span class="pending-count-badge" [class.has-pending]="(tutorPending.total() ?? 0) > 0" [attr.aria-label]="tutorPending.total() === null ? 'Pendientes no disponibles' : tutorPending.total() + ' actividades pendientes por revisar'" title="Actividades pendientes por revisar">{{ tutorPending.total() ?? '—' }}</span></a>
+        }
+        @if (hasRole(session.user.roles, 'ADMIN_LABORATORIO')) {
+          <p class="menu-group-label">ADMINISTRACIÓN DE LABORATORIO</p>
+          <a class="menu-item" routerLink="/admin/usuarios" routerLinkActive="active">Usuarios y roles</a>
+          <a class="menu-item" routerLink="/admin/asignaciones" routerLinkActive="active">Asignaciones</a>
+        }
+        @if (hasRole(session.user.roles, 'ADMIN_GENERAL')) {
+          <p class="menu-group-label">ADMINISTRACIÓN GENERAL</p>
+          <a class="menu-item" routerLink="/admin/usuarios" routerLinkActive="active">Usuarios</a>
+          <a class="menu-item" routerLink="/admin/laboratorios" routerLinkActive="active">Laboratorios</a>
+          <a class="menu-item" routerLink="/admin/asignaciones" routerLinkActive="active">Asignaciones</a>
+          <a class="menu-item" routerLink="/admin/feriados" routerLinkActive="active">Feriados</a>
+          <a class="menu-item" routerLink="/admin/auditoria" routerLinkActive="active">Auditoría</a>
+        }
+      </nav>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div class="page-identity"><span class="mobile-brand-mark" aria-hidden="true">E</span><strong>Bitácora de actividades</strong></div>
+        <div class="topbar-user"><span class="topbar-avatar" aria-hidden="true">{{ initials(session.user.name) }}</span><span>{{ session.user.name }}</span><button type="button" (click)="auth.logout()" [disabled]="auth.closingSession()" aria-label="Cerrar sesión" title="Cerrar sesión">↪</button></div>
+      </header>
+      <router-outlet />
+    </div>
+  </div>
+}
+
+@if (auth.logoutError()) {
+  <div class="session-error-backdrop">
+    <section class="session-error-modal" role="alertdialog" aria-modal="true" aria-labelledby="session-error-title">
+      <h2 id="session-error-title">No se pudo cerrar la sesión</h2>
+      <p>{{ auth.logoutError() }}</p>
+      <button type="button" (click)="auth.logoutError.set('')">Entendido</button>
+    </section>
+  </div>
+}

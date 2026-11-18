@@ -1,0 +1,204 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: #f8fafc;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: #183149;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(40, 129, 174, 0.38);
+  outline-offset: 3px;
+}
+
+.date-input-wrap {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-input-wrap > input[type='text'] {
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 0;
+}
+
+.calendar-button {
+  display: grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  padding: 0;
+  color: #3c7e40;
+  border: 1px solid #d8e2da;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.calendar-button:hover {
+  color: #fff;
+  border-color: #3c7e40;
+  background: #3c7e40;
+}
+
+.calendar-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.date-input-wrap > input.native-date-picker {
+  position: absolute !important;
+  width: 1px !important;
+  min-width: 1px !important;
+  height: 1px !important;
+  min-height: 1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  pointer-events: none !important;
+}
+
+.error-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(22 34 26 / 48%);
+  backdrop-filter: blur(3px);
+}
+
+.error-modal {
+  display: grid;
+  width: min(100%, 420px);
+  justify-items: center;
+  padding: 28px 26px 24px;
+  border: 1px solid #f0d4d1;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 22px 70px rgb(18 36 24 / 24%);
+  text-align: center;
+  animation: error-modal-enter 160ms ease-out;
+}
+
+.error-modal-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: #a33d39;
+  border: 1px solid #f0ceca;
+  border-radius: 50%;
+  background: #fff1ef;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.error-modal h2 { margin: 15px 0 7px; color: #3f302e; font-size: 1.375rem; font-weight: 700; }
+.error-modal p { margin: 0 0 20px; color: #776865; font-size: 1rem; line-height: 1.6; overflow-wrap: anywhere; }
+.error-modal .primary-button { min-width: 120px; }
+
+@keyframes error-modal-enter {
+  from { opacity: 0; transform: translateY(7px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.activity-confirm-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgb(22 34 26 / 48%); backdrop-filter: blur(3px); }
+.activity-confirm-modal { display: grid; width: min(100%, 440px); justify-items: center; padding: 26px; border: 1px solid #eadbd7; border-radius: 14px; background: #fff; box-shadow: 0 22px 70px rgb(18 36 24 / 24%); text-align: center; }
+.activity-confirm-modal h2 { margin: 0 0 9px; color: #2d3b32; font-size: 1.375rem; }
+.activity-confirm-modal p { margin: 0 0 20px; color: #718077; font-size: 1rem; line-height: 1.6; overflow-wrap: anywhere; }
+.activity-confirm-actions { display: flex; justify-content: center; gap: 8px; }
+.activity-delete-button { min-height: 44px; padding: 0 14px; color: #fff; border: 1px solid #a33d39; border-radius: 7px; background: #b74742; cursor: pointer; font: inherit; font-size: 1rem; font-weight: 700; }
+.activity-delete-button:disabled { opacity: .55; cursor: wait; }
+
+// Shared space for larger text, long names and actions on narrow screens.
+.page-heading, .list-heading, .section-title, .section-heading,
+.form-actions, .modal-actions, .activity-confirm-actions, .heading-actions {
+  flex-wrap: wrap;
+}
+
+.page-heading > div, .list-heading > div, .section-title > div,
+.form-grid > *, .password-grid > *, .role-grid > *, .account-type > * {
+  min-width: 0;
+}
+
+.choice-card strong, .role-option strong, td {
+  overflow-wrap: anywhere;
+}
+
+button, a.menu-item {
+  touch-action: manipulation;
+}
+
+button {
+  min-height: 44px;
+}
+
+.pending-count-badge {
+  display: inline-flex;
+  min-width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: .2rem .45rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: inherit;
+  background: transparent;
+  font-size: .875rem;
+  font-weight: 700;
+}
+.pending-count-badge.has-pending { border-color: currentColor; color: #fff; background: #3c7e40; }
+.menu-item .pending-count-badge { margin-left: auto; }
+
+input[type='checkbox'], input[type='radio'] {
+  width: 20px;
+  height: 20px;
+}
+
+.error-modal, .activity-confirm-modal, .password-reset-modal,
+.assignment-confirm-modal, .session-error-modal {
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+
+@media (max-width: 520px) {
+  .form-actions > button, .activity-confirm-actions > button {
+    flex: 1 1 100%;
+    min-height: 44px;
+    padding-block: 10px;
+  }
+}

@@ -1,0 +1,138 @@
+<main class="dashboard activities-page">
+  <div class="page-heading">
+    <div><span class="eyebrow">ÁREA DE PRACTICANTE</span><h1>{{ isCreateRoute ? 'Crear actividad' : 'Mis actividades' }}</h1><p>{{ isCreateRoute ? 'Agrega cada actividad realizada durante tu jornada.' : 'Registra las tareas de tu jornada y consulta su estado de revisión.' }}</p></div>
+    @if (isCreateRoute) { <button class="secondary-button page-action-link" type="button" (click)="goToActivities()" [disabled]="saving">Volver a mis actividades</button> }
+    @else {
+      <div class="page-actions">
+        <a class="secondary-button page-action-link" routerLink="/bitacora/exportar">Exportar bitácora</a>
+        <a class="primary-button page-action-link" routerLink="/practicante/actividades/nueva">+ Crear actividad</a>
+      </div>
+    }
+  </div>
+
+  <section class="instruction-card activity-guidance">
+    <div class="instruction-heading"><strong>Antes de registrar</strong></div>
+    <p>Puedes registrar actividades aunque no tengas una jornada registrada para ese día, siempre que sea un día laborable y no sea feriado. El total de actividades de la fecha no debe superar seis horas. Las actividades enviadas quedan pendientes hasta que el tutor las revise.</p>
+  </section>
+
+  @if (errorMessage) {
+    <div class="error-modal-backdrop" role="presentation" (click)="dismissError()">
+      <section class="error-modal" role="alertdialog" aria-modal="true" aria-labelledby="activity-error-title" aria-describedby="activity-error-message" (click)="$event.stopPropagation()">
+        <span class="error-modal-icon" aria-hidden="true">!</span>
+        <h2 id="activity-error-title">No se pudo completar la acción</h2>
+        <p id="activity-error-message">{{ errorMessage }}</p>
+        <button class="primary-button" type="button" autofocus (click)="dismissError()">Entendido</button>
+      </section>
+    </div>
+  }
+  @if (pendingDeleteActivity; as activity) {
+    <div class="activity-confirm-backdrop" role="presentation">
+      <section class="activity-confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-activity-title" aria-describedby="delete-activity-message">
+        <h2 id="delete-activity-title">Eliminar actividad</h2>
+        <p id="delete-activity-message">¿Seguro deseas eliminar la actividad {{ pendingDeleteActivityNumber }}? Esta acción no se puede deshacer.</p>
+        <div class="activity-confirm-actions">
+          <button class="secondary-button" type="button" (click)="cancelDelete()" [disabled]="deletingActivityId !== null">Cancelar</button>
+          <button class="activity-delete-button" type="button" (click)="confirmDelete()" [disabled]="deletingActivityId !== null">{{ deletingActivityId === activity.id ? 'Eliminando…' : 'Eliminar' }}</button>
+        </div>
+      </section>
+    </div>
+  }
+  @if (successMessage) { <div class="feedback success-feedback" role="status">{{ successMessage }}</div> }
+
+  @if (formVisible) {
+    <section class="activity-form-card" aria-labelledby="activity-form-title">
+      <div class="form-card-heading"><div><span class="eyebrow">{{ editingId === null ? 'NUEVO REGISTRO' : 'EDICIÓN' }}</span><h2 id="activity-form-title">{{ isCreateRoute ? 'Registrar actividades' : 'Editar actividad' }}</h2></div></div>
+      @if (editingObservation) {
+        <p class="review-observation" role="note"><strong>Motivo del rechazo:</strong> {{ editingObservation }}</p>
+      }
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <div class="daily-hours-summary" aria-live="polite">
+          @if (isCreateRoute) {
+            <span><strong>{{ dailyUsageLoading ? '…' : (dailyHours | number: '1.0-2') }}</strong> horas ya registradas para esta fecha</span>
+            <span><strong>{{ dailyUsageLoading ? '…' : (availableHours | number: '1.0-2') }}</strong> horas disponibles de 6</span>
+          } @else {
+            <span><strong>{{ dailyUsageLoading ? '…' : (dailyHours | number: '1.0-2') }}</strong> horas de otras actividades del día</span>
+            <span><strong>{{ dailyUsageLoading ? '…' : (availableHours | number: '1.0-2') }}</strong> de 6 horas disponibles</span>
+          }
+        </div>
+        <div class="form-grid">
+          <label>Fecha de la actividad<span class="date-input-wrap"><input type="text" formControlName="date" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha de la actividad, formato día/mes/año" /><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha de la actividad" (click)="openDatePicker(activityDatePicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #activityDatePicker class="native-date-picker" type="date" [value]="pickerDate(form.controls.date.value)" [max]="editingId === null ? today : null" (change)="setActivityDateFromPicker($event)" tabindex="-1" aria-hidden="true" /></span>
+            @if (form.controls.date.touched && form.controls.date.hasError('required')) { <small class="field-error">Selecciona una fecha.</small> }
+            @else if (form.controls.date.touched && form.controls.date.hasError('dateFormat')) { <small class="field-error">Usa una fecha válida con formato dd/mm/yyyy.</small> }
+            @else if (form.controls.date.touched && form.controls.date.hasError('maxDate')) { <small class="field-error">La fecha no puede ser posterior a hoy.</small> }
+          </label>
+          @if (isCreateRoute) {
+            <div class="activity-entry-list">
+              @for (entry of activityEntries; track entry.id; let index = $index) {
+                <article class="activity-entry-card">
+                  <div class="activity-entry-heading"><strong>Actividad {{ index + 1 }}</strong>
+                    <button class="text-button remove-entry-button" type="button" (click)="removeActivityEntry(entry.id)">Quitar</button>
+                  </div>
+                  <label>Descripción<textarea [(ngModel)]="entry.description" (ngModelChange)="persistCreationDraft()" [ngModelOptions]="{ standalone: true }" rows="3" maxlength="1000" placeholder="Describe las tareas realizadas"></textarea></label>
+                  <label>Horas que tomó<input type="number" [(ngModel)]="entry.durationHours" (ngModelChange)="persistCreationDraft()" [ngModelOptions]="{ standalone: true }" min="0.01" max="6" step="0.01" inputmode="decimal" /></label>
+                </article>
+              }
+              <button class="secondary-button add-entry-button" type="button" (click)="addActivityEntry()" [disabled]="totalHours >= 6">{{ totalHours >= 6 ? 'Límite diario alcanzado' : '+ Agregar actividad' }}</button>
+              <p class="hours-total-note">Total del día: <strong>{{ totalHours | number: '1.0-2' }} de 6 horas</strong></p>
+            </div>
+          } @else {
+            <label>Horas realizadas<input type="number" formControlName="durationHours" min="0.01" max="6" step="0.01" inputmode="decimal" />
+              @if (form.controls.durationHours.touched && form.controls.durationHours.invalid) { <small class="field-error">Ingresa un valor mayor que 0 y máximo de 6 horas.</small> }
+            </label>
+            <label class="description-field">Descripción<textarea formControlName="description" rows="4" maxlength="1000" placeholder="Describe las tareas realizadas durante la jornada"></textarea>
+              @if (form.controls.description.touched && form.controls.description.invalid) { <small class="field-error">La descripción es obligatoria y admite hasta 1000 caracteres.</small> }
+            </label>
+          }
+        </div>
+        <div class="form-actions"><button class="secondary-button" type="button" (click)="cancelForm()" [disabled]="saving">Cancelar</button><button class="primary-button" type="submit" [disabled]="saving || (isCreateRoute && dailyUsageLoading)">{{ saving ? 'Guardando…' : (isCreateRoute ? 'Guardar actividades' : 'Guardar borrador') }}</button></div>
+      </form>
+    </section>
+  }
+
+  @if (isCreateRoute && creationSaved) {
+    <section class="activity-saved-card" aria-live="polite">
+      <span class="saved-check" aria-hidden="true">✓</span>
+      <h2>{{ createdActivityCount === 1 ? 'Actividad guardada' : 'Actividades guardadas' }}</h2>
+      <p>Se registraron {{ createdActivityCount }} actividades con un total de {{ createdHours | number: '1.0-2' }} horas. Quedaron como borrador; puedes enviarlas a revisión desde tu lista de actividades.</p>
+      <button class="primary-button page-action-link" type="button" (click)="goToActivities()">Ir a mis actividades</button>
+    </section>
+  }
+
+  @if (!isCreateRoute) {
+  <section class="activity-list-card" aria-labelledby="activity-list-title">
+    <div class="list-heading"><div><span class="eyebrow">BITÁCORA</span><h2 id="activity-list-title">Actividades registradas</h2></div><span class="activity-count">{{ activities.length }} {{ activities.length === 1 ? 'actividad' : 'actividades' }}</span></div>
+    <form class="date-filter" (ngSubmit)="search()">
+      <label>Desde<span class="date-input-wrap"><input type="text" name="from" [(ngModel)]="from" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha inicial, formato día/mes/año" /><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha inicial" (click)="openDatePicker(fromPicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #fromPicker class="native-date-picker" type="date" [value]="pickerDate(from)" (change)="setFilterDateFromPicker($event, 'from')" tabindex="-1" aria-hidden="true" /></span></label>
+      <label>Hasta<span class="date-input-wrap"><input type="text" name="to" [(ngModel)]="to" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha final, formato día/mes/año" /><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha final" (click)="openDatePicker(toPicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #toPicker class="native-date-picker" type="date" [value]="pickerDate(to)" (change)="setFilterDateFromPicker($event, 'to')" tabindex="-1" aria-hidden="true" /></span></label>
+      <button class="secondary-button" type="submit">Consultar</button>
+    </form>
+    <p class="pending-activities-note">Las actividades enviadas a revisión se mantienen visibles aunque su fecha no esté en el rango consultado.</p>
+    @if (pendingLoading && pendingActivities.length === 0) { <div class="pending-loading" role="status">Consultando actividades pendientes de revisión…</div> }
+    @if (loading) { <div class="empty-state">Cargando actividades…</div> }
+    @else if (totalActivities === 0) { <div class="empty-state"><strong>No hay actividades en este rango</strong><span>Cuando registres una actividad, aparecerá aquí.</span></div> }
+    @else {
+      <div class="table-scroll"><table><thead><tr><th>N.º</th><th>Fecha</th><th>Actividad</th><th>Horas</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+        @for (activity of visibleActivities; track trackActivity($index, activity); let index = $index) {
+          <tr>
+            <td>{{ pageOffset + index + 1 }}</td><td class="date-cell">{{ displayDate(activity.date) }}</td><td class="description-cell">{{ activity.description }}
+              @if (activity.status === 'RECHAZADA') {
+                <p class="review-observation"><strong>Motivo del rechazo:</strong> {{ activity.observation || 'No se registró una observación para esta revisión.' }}</p>
+              }
+            </td><td>{{ activity.durationHours | number: '1.0-2' }}</td>
+            <td><span class="status-pill" [class]="'status-pill ' + statusClass(activity.status)">{{ statusLabels[activity.status] }}</span></td>
+            <td><div class="row-actions">
+              @if (canEdit(activity)) {
+              @if (activity.status === 'BORRADOR') { <button class="row-button delete-action" type="button" [disabled]="deletingActivityId === activity.id" (click)="requestDelete(activity, pageOffset + index + 1)">Eliminar</button> }
+                <button class="row-button edit-action" type="button" (click)="edit(activity)">Editar</button>
+                <button class="row-button submit-action" type="button" [disabled]="submittingId === activity.id" (click)="submit(activity)">{{ submittingId === activity.id ? 'Enviando…' : 'Enviar a revisión' }}</button>
+              } @else { <span class="no-action">—</span> }
+            </div></td>
+          </tr>
+        }
+      </tbody></table></div>
+      <app-pagination [totalItems]="totalActivities" [pageSize]="pageSize" [currentPage]="currentPage" [disabled]="loading" (pageChange)="load($event)" />
+    }
+  </section>
+  }
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

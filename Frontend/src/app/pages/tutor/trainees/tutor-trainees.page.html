@@ -1,0 +1,62 @@
+<main class="dashboard tutor-trainees-page">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">TUTOR ESPE</span>
+      <h1>Practicantes asignados</h1>
+      <p>Consulta los practicantes que tienes a cargo y sus datos de contacto.</p>
+    </div>
+    <button class="secondary-button" type="button" (click)="refresh()" [disabled]="loading">
+      {{ loading ? 'Actualizando…' : 'Actualizar lista' }}
+    </button>
+  </div>
+
+  <section class="trainees-card" aria-labelledby="trainees-heading">
+    <div class="list-heading">
+      <div><span class="eyebrow">ASIGNACIONES VIGENTES</span><h2 id="trainees-heading">Mi listado</h2></div>
+      <span class="trainee-count">{{ filteredTrainees.length }} de {{ totalTrainees }} {{ totalTrainees === 1 ? 'practicante' : 'practicantes' }}</span>
+    </div>
+
+    @if (loading) {
+      <div class="empty-state" role="status">Consultando practicantes asignados…</div>
+    } @else if (loadFailed) {
+      <div class="empty-state">
+        <strong>No se pudo cargar la lista</strong>
+        <span>{{ errorMessage }}</span>
+        <button class="primary-button" type="button" (click)="loadTrainees()">Reintentar</button>
+      </div>
+    } @else if (totalTrainees === 0 && !search.trim()) {
+      <div class="empty-state">
+        <strong>No tienes practicantes asignados</strong>
+        <span>Cuando el administrador te asigne practicantes, aparecerán en esta lista.</span>
+      </div>
+    } @else if (totalTrainees === 0) {
+      <div class="empty-state"><strong>No hay resultados</strong><span>Prueba con otro nombre, correo o laboratorio.</span></div>
+    } @else {
+      <label class="trainee-search" for="trainee-filter">Buscar practicante
+        <input id="trainee-filter" type="search" [(ngModel)]="search" (ngModelChange)="loadTrainees(1)" name="search" placeholder="Escribe nombre, correo o laboratorio" [disabled]="loading" />
+      </label>
+
+      @if (filteredTrainees.length > 0) {
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Practicante</th><th>Correo electrónico</th><th>Laboratorio</th><th>Por revisar</th><th>Actividades</th></tr></thead>
+            <tbody>
+              @for (trainee of visibleTrainees; track trainee.id) {
+                <tr>
+                  <td><strong class="trainee-name">{{ trainee.fullName }}</strong></td>
+                  <td><a class="trainee-email" [href]="'mailto:' + trainee.email">{{ trainee.email }}</a></td>
+                  <td>{{ trainee.laboratoryName }}</td>
+                  <td><span class="pending-count-badge" [class.has-pending]="(tutorPending.countFor(trainee.id) ?? 0) > 0" [attr.aria-label]="tutorPending.countFor(trainee.id) === null ? 'Pendientes no disponibles' : tutorPending.countFor(trainee.id) + ' actividades pendientes por revisar'">{{ tutorPending.countFor(trainee.id) ?? '—' }}</span></td>
+                  <td><a class="activity-link" [routerLink]="['/tutor/practicantes', trainee.id, 'actividades']">Ver actividades</a></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <app-pagination [totalItems]="totalTrainees" [pageSize]="pageSize" [currentPage]="currentPage" [disabled]="loading" (pageChange)="loadTrainees($event)" />
+        </div>
+      }
+    }
+  </section>
+
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

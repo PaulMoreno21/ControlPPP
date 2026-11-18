@@ -1,0 +1,109 @@
+<main class="dashboard tutor-activities-page">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">TUTOR ESPE</span>
+      <h1>Actividades del practicante</h1>
+      @if (history; as data) {
+        <p>{{ data.trainee.fullName }} <span>·</span> {{ data.trainee.email }}</p>
+      } @else {
+        <p>Consulta las actividades registradas y el estado de cada revisión.</p>
+      }
+    </div>
+    <div class="heading-actions">
+      <a class="secondary-button" routerLink="/tutor/practicantes">Volver al listado</a>
+      <button class="secondary-button" type="button" (click)="loadActivities(currentPage)" [disabled]="loading">
+        {{ loading ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+    </div>
+  </div>
+
+  @if (successMessage) { <div class="feedback success-feedback" role="status">{{ successMessage }}</div> }
+
+  @if (selectedActivity; as activity) {
+    <div class="review-backdrop" role="presentation">
+      <section class="review-modal" role="alertdialog" aria-modal="true" aria-labelledby="review-modal-title">
+        <span class="eyebrow">REVISIÓN DE ACTIVIDAD</span>
+        <h2 id="review-modal-title">{{ selectedDecision === 'ACEPTADA' ? 'Aceptar actividad' : 'Rechazar actividad' }}</h2>
+        <p class="review-trainee">{{ history?.trainee?.fullName }} <span>· Actividad {{ selectedActivityNumber }}</span></p>
+        <p class="review-description">{{ activity.description }}</p>
+        <p class="review-meta">{{ formatDate(activity.date) }} <span>·</span> {{ activity.durationHours | number:'1.0-2' }} horas</p>
+
+        @if (selectedDecision === 'RECHAZADA') {
+          <label class="observation-field" for="activity-review-observation">Observación del rechazo
+            <textarea id="activity-review-observation" [(ngModel)]="observation" name="observation" rows="4" maxlength="2000" placeholder="Explica qué debe corregirse" [disabled]="reviewingId !== null"></textarea>
+          </label>
+          <small class="field-hint">La observación es obligatoria y se mostrará al practicante.</small>
+        } @else {
+          <p class="accept-hint">La actividad quedará aceptada y sus horas se incluirán en la bitácora.</p>
+        }
+
+        @if (reviewError) { <p class="modal-error" role="alert">{{ reviewError }}</p> }
+        <div class="modal-actions">
+          <button class="secondary-button" type="button" (click)="cancelReview()" [disabled]="reviewingId !== null">Cancelar</button>
+          <button class="primary-button" [class.reject-button]="selectedDecision === 'RECHAZADA'" type="button" (click)="confirmReview()" [disabled]="reviewingId !== null">
+            {{ reviewingId === activity.submissionId ? 'Guardando…' : (selectedDecision === 'ACEPTADA' ? 'Confirmar aceptación' : 'Confirmar rechazo') }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (loading) {
+    <section class="activities-card"><div class="empty-state" role="status">Consultando actividades…</div></section>
+  } @else if (loadFailed) {
+    <section class="activities-card">
+      <div class="empty-state">
+        <strong>No se pudieron cargar las actividades</strong>
+        <span>{{ errorMessage }}</span>
+        <button class="primary-button" type="button" (click)="loadActivities()">Reintentar</button>
+      </div>
+    </section>
+  } @else if (history; as data) {
+    <section class="summary-grid" aria-label="Resumen de actividades">
+      <article class="summary-card"><span>Horas aceptadas</span><strong>{{ data.acceptedHoursTotal | number:'1.0-2' }}</strong></article>
+      <article class="summary-card"><span>Actividades aceptadas</span><strong>{{ acceptedCount }}</strong></article>
+      <article class="summary-card"><span>Pendientes de revisión</span><strong>{{ pendingCount }}</strong></article>
+    </section>
+
+    <section class="activities-card" aria-labelledby="activities-heading">
+      <div class="list-heading">
+        <div><span class="eyebrow">HISTORIAL</span><h2 id="activities-heading">Actividades registradas</h2></div>
+        <span class="activity-count">{{ data.activities.totalElements }} {{ data.activities.totalElements === 1 ? 'actividad' : 'actividades' }}</span>
+      </div>
+
+      @if (data.activities.totalElements === 0) {
+        <div class="empty-state"><strong>Este practicante todavía no tiene actividades enviadas</strong><span>Las actividades aparecerán cuando las envíe a revisión.</span></div>
+      } @else {
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>N.º</th><th>Fecha</th><th>Descripción</th><th>Horas</th><th>Estado</th><th>Enviada</th><th>Observación</th><th>Acciones</th></tr></thead>
+            <tbody>
+              @for (activity of visibleActivities; track activity.activityId; let index = $index) {
+                <tr>
+                  <td>{{ activityNumber(index) }}</td>
+                  <td>{{ formatDate(activity.date) }}</td>
+                  <td class="description-cell">{{ activity.description }}</td>
+                  <td>{{ activity.durationHours | number:'1.0-2' }}</td>
+                  <td><span class="status-badge" [class.pending]="activity.status === 'PENDIENTE'" [class.accepted]="activity.status === 'ACEPTADA'" [class.rejected]="activity.status === 'RECHAZADA'">{{ statusLabel(activity.status) }}</span></td>
+                  <td>{{ activity.submittedAt ? (activity.submittedAt | date:'dd/MM/yyyy HH:mm':'America/Guayaquil') : '—' }}</td>
+                  <td class="observation-cell">{{ activity.observation || '—' }}</td>
+                  <td>
+                    @if (activity.status === 'PENDIENTE') {
+                      <div class="review-actions">
+                        <button class="reject-button" type="button" (click)="requestReview(activity, 'RECHAZADA', index)" [disabled]="reviewingId !== null">Rechazar</button>
+                        <button class="primary-button" type="button" (click)="requestReview(activity, 'ACEPTADA', index)" [disabled]="reviewingId !== null">Aceptar</button>
+                      </div>
+                    } @else { <span class="no-action">—</span> }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <app-pagination [totalItems]="data.activities.totalElements" [pageSize]="pageSize" [currentPage]="currentPage" [disabled]="loading || reviewingId !== null" (pageChange)="loadActivities($event)" />
+        </div>
+      }
+    </section>
+  }
+
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

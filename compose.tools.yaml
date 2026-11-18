@@ -1,0 +1,12 @@
+name: control-ppp-tools
+services:
+  tools:
+    build:
+      context: ./deploy/tools
+    image: control-ppp-tools:local
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    network_mode: none
+    entrypoint: ["python", "/tools/setup.py"]

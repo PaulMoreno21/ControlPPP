@@ -1,0 +1,147 @@
+<main class="dashboard admin-assignments-page">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">{{ isGlobalAdmin ? 'ADMINISTRACIÓN GENERAL' : 'ADMINISTRACIÓN DE LABORATORIO' }}</span>
+      <h1>Asignaciones</h1>
+      <p>Asigna un tutor ESPE a cada practicante de tu laboratorio.</p>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="error-modal-backdrop" role="presentation" (click)="errorMessage = ''">
+      <section class="error-modal" role="alertdialog" aria-modal="true" aria-labelledby="assignment-error-title" (click)="$event.stopPropagation()">
+        <span class="error-modal-icon" aria-hidden="true">!</span>
+        <h2 id="assignment-error-title">No se pudo completar la acción</h2>
+        <p>{{ errorMessage }}</p>
+        <button class="primary-button" type="button" (click)="errorMessage = ''">Entendido</button>
+      </section>
+    </div>
+  }
+
+  @if (pendingReassignment) {
+    <div class="assignment-confirm-backdrop" role="presentation">
+      <section class="assignment-confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="reassign-title">
+        <h2 id="reassign-title">Reasignar tutor</h2>
+        <p>El practicante {{ selectedTraineeName() }} ya tiene un tutor asignado. ¿Deseas cambiarlo por {{ selectedTutorName() }}?</p>
+        <div class="assignment-confirm-actions">
+          <button class="secondary-button" type="button" (click)="cancelReassignment()" [disabled]="assigning">Cancelar</button>
+          <button class="primary-button" type="button" (click)="confirmReassignment()" [disabled]="assigning">{{ assigning ? 'Guardando…' : 'Confirmar reasignación' }}</button>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (pendingUnlink; as assignment) {
+    <div class="assignment-confirm-backdrop" role="presentation">
+      <section class="assignment-confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="unlink-title">
+        <h2 id="unlink-title">Desvincular tutor</h2>
+        <p>¿Seguro que deseas desvincular a {{ assignment.tutorName }} del practicante {{ assignment.traineeName }}? La asignación se conservará en el historial.</p>
+        <div class="assignment-confirm-actions">
+          <button class="secondary-button" type="button" (click)="cancelUnlink()" [disabled]="unlinkingAssignmentId !== null">Cancelar</button>
+          <button class="danger-button" type="button" (click)="confirmUnlink()" [disabled]="unlinkingAssignmentId !== null">{{ unlinkingAssignmentId === assignment.id ? 'Desvinculando…' : 'Desvincular tutor' }}</button>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (successMessage) { <div class="feedback success-feedback" role="status">{{ successMessage }}</div> }
+
+  <section class="laboratory-card">
+    <label for="assignment-laboratory">{{ isGlobalAdmin ? 'Laboratorio' : 'Laboratorio asignado' }}</label>
+    @if (loadingLaboratories) { <span class="loading-hint">Cargando laboratorios…</span> }
+    @else if (loadingFailed && laboratories.length === 0) {
+      <span class="loading-hint">No se pudo cargar el laboratorio. <button class="retry-button" type="button" (click)="loadLaboratories()">Reintentar</button></span>
+    }
+    @else if (laboratories.length === 0) { <span class="loading-hint">No tienes laboratorios asignados.</span> }
+    @else {
+      <select id="assignment-laboratory" [ngModel]="selectedLaboratoryId" (ngModelChange)="changeLaboratory($event)" name="laboratory" [disabled]="loadingData || assigning || (!isGlobalAdmin && laboratories.length === 1)">
+        @if (isGlobalAdmin || laboratories.length > 1) { <option [ngValue]="null" disabled>Selecciona un laboratorio</option> }
+        @for (laboratory of laboratories; track laboratory.id) {
+          <option [ngValue]="laboratory.id">{{ laboratory.name }}{{ laboratory.location ? ' · ' + laboratory.location : '' }}</option>
+        }
+      </select>
+    }
+  </section>
+
+  @if (selectedLaboratoryId === null) {
+    <section class="empty-state-card"><strong>Selecciona un laboratorio</strong><span>Se mostrarán sus practicantes, tutores y el historial de asignaciones.</span></section>
+  } @else {
+    <section class="assignment-form-card">
+      <div class="section-title">
+        <div><span class="eyebrow">NUEVA ASIGNACIÓN</span><h2>Vincular practicante y tutor</h2></div>
+      </div>
+      @if (loadingData) { <div class="inline-loading" role="status">Cargando practicantes, tutores y asignaciones…</div> }
+      @else {
+        <div class="assignment-form">
+          <div class="combobox-field">
+            <label for="trainee-search">Practicante</label>
+            <div class="user-combobox">
+              <input id="trainee-search" type="search" name="trainee" role="combobox" aria-label="Buscar practicante" aria-controls="trainee-options" aria-autocomplete="list" [attr.aria-expanded]="traineeOptionsOpen" [ngModel]="traineeSearch" (ngModelChange)="updateTraineeSearch($event)" (focus)="traineeOptionsOpen = true" (blur)="traineeOptionsOpen = false" [disabled]="assigning || trainees.length === 0" placeholder="Escribe nombre o correo" autocomplete="off" />
+              @if (traineeOptionsOpen && !assigning && trainees.length > 0) {
+                <div class="combobox-options" id="trainee-options" role="listbox">
+                  @for (trainee of filteredTrainees; track trainee.id) {
+                    <button type="button" role="option" [attr.aria-selected]="selectedTraineeId === trainee.id" (mousedown)="$event.preventDefault()" (click)="selectTrainee(trainee)">{{ trainee.firstName }} {{ trainee.lastName }}<small>{{ trainee.email }}</small></button>
+                  } @empty { <span class="combobox-empty">No hay practicantes que coincidan.</span> }
+                </div>
+              }
+            </div>
+          </div>
+          <div class="combobox-field">
+            <label for="tutor-search">Tutor ESPE</label>
+            <div class="user-combobox">
+              <input id="tutor-search" type="search" name="tutor" role="combobox" aria-label="Buscar tutor ESPE" aria-controls="tutor-options" aria-autocomplete="list" [attr.aria-expanded]="tutorOptionsOpen" [ngModel]="tutorOptionSearch" (ngModelChange)="updateTutorOptionSearch($event)" (focus)="tutorOptionsOpen = true" (blur)="tutorOptionsOpen = false" [disabled]="assigning || tutors.length === 0" placeholder="Escribe nombre o correo" autocomplete="off" />
+              @if (tutorOptionsOpen && !assigning && tutors.length > 0) {
+                <div class="combobox-options" id="tutor-options" role="listbox">
+                  @for (tutor of filteredTutors; track tutor.id) {
+                    <button type="button" role="option" [attr.aria-selected]="selectedTutorId === tutor.id" (mousedown)="$event.preventDefault()" (click)="selectTutor(tutor)">{{ tutor.firstName }} {{ tutor.lastName }}<small>{{ tutor.email }}</small></button>
+                  } @empty { <span class="combobox-empty">No hay tutores que coincidan.</span> }
+                </div>
+              }
+            </div>
+          </div>
+          <button class="primary-button" type="button" (click)="requestAssignment()" [disabled]="assigning || trainees.length === 0 || tutors.length === 0 || selectedTutorAlreadyAssigned">
+            {{ assigning ? 'Guardando…' : (selectedTutorAlreadyAssigned ? 'Tutor ya asignado' : (selectedTraineeHasAssignment ? 'Reasignar tutor' : 'Asignar tutor')) }}
+          </button>
+        </div>
+        @if (trainees.length === 0 || tutors.length === 0) {
+          <p class="roster-hint">Para asignar, el laboratorio debe tener al menos un practicante activo y un tutor ESPE activo con sus respectivos roles.</p>
+        }
+      }
+    </section>
+
+    <section class="assignments-card" aria-labelledby="assignments-title">
+      <div class="list-heading">
+        <div><span class="eyebrow">VIGENTES</span><h2 id="assignments-title">Asignaciones activas</h2></div>
+        <div class="list-actions">
+          <span class="assignment-count">{{ totalAssignments }} {{ totalAssignments === 1 ? 'asignación' : 'asignaciones' }}</span>
+          <button class="secondary-button" type="button" (click)="loadLaboratoryData()" [disabled]="loadingData || assigning">Actualizar</button>
+        </div>
+      </div>
+      <label class="tutor-filter">Buscar tutor por nombre o correo
+        <input type="search" [(ngModel)]="tutorSearch" (ngModelChange)="loadLaboratoryData(1)" name="tutorSearch" placeholder="Escribe el nombre o correo del tutor" />
+      </label>
+      @if (loadingData) { <div class="empty-state">Consultando asignaciones…</div> }
+      @else if (loadingFailed) { <div class="empty-state"><strong>No se pudieron cargar las asignaciones</strong><button class="retry-button" type="button" (click)="loadLaboratoryData()">Reintentar</button></div> }
+      @else if (totalAssignments === 0 && !tutorSearch.trim()) { <div class="empty-state"><strong>No hay asignaciones activas</strong><span>Usa el formulario para asignar un tutor a un practicante.</span></div> }
+      @else if (totalAssignments === 0) { <div class="empty-state"><strong>No hay practicantes asignados a ese tutor</strong><span>Prueba con otro nombre o correo.</span></div> }
+      @else {
+        <div class="table-scroll"><table>
+          <thead><tr><th>Practicante</th><th>Tutor ESPE</th><th>Fecha de asignación</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody>
+            @for (assignment of visibleAssignments; track assignment.id) {
+              <tr>
+                <td>{{ assignment.traineeName }}</td>
+                <td>{{ assignment.tutorName }}</td>
+                <td>{{ assignment.assignedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td><span class="assignment-status">Vigente</span></td>
+                <td>@if (assignment.current) { <button class="unlink-button" type="button" (click)="requestUnlink(assignment)" [disabled]="assigning || unlinkingAssignmentId !== null">Desvincular</button> } @else { <span class="no-action">—</span> }</td>
+              </tr>
+            }
+          </tbody>
+        </table></div>
+        <app-pagination [totalItems]="totalAssignments" [pageSize]="pageSize" [currentPage]="currentPage" [disabled]="loadingData" (pageChange)="loadLaboratoryData($event)" />
+      }
+    </section>
+  }
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

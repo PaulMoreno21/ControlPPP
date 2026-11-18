@@ -1,0 +1,71 @@
+<section class="users-card" aria-labelledby="general-administrators-heading">
+  <div class="list-heading">
+    <div><span class="eyebrow">ADMINISTRACIÓN GLOBAL</span><h2 id="general-administrators-heading">Administradores generales</h2></div>
+    <button class="secondary-button" type="button" (click)="loadUsers(page)" [disabled]="loading || busy">Actualizar</button>
+  </div>
+  @if (successMessage) { <p class="feedback success-feedback" role="status">{{ successMessage }}</p> }
+  <label class="user-filter" for="general-administrator-search">Buscar por identificación
+    <input id="general-administrator-search" type="search" [(ngModel)]="search" (ngModelChange)="loadUsers()" maxlength="10" placeholder="Escribe la cédula o pasaporte" [disabled]="busy" />
+  </label>
+  @if (loading) { <div class="empty-state" role="status">Cargando administradores generales…</div> }
+  @else if (failed) { <div class="empty-state"><strong>No se pudo cargar la lista</strong><button class="secondary-button" type="button" (click)="loadUsers(page)">Reintentar</button></div> }
+  @else if (total === 0) { <div class="empty-state">No se encontraron administradores generales.</div> }
+  @else {
+    <div class="table-scroll"><table>
+      <thead><tr><th>Identificación</th><th>Nombre</th><th>Correo</th><th>Roles</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>@for (user of users; track user.id) {
+        <tr><td>{{ user.nationalId }}</td><td>{{ user.firstName }} {{ user.lastName }} @if (isSelf(user)) { <small>(Tu cuenta)</small> }</td>
+          <td>{{ user.email }}</td><td><div class="role-tags">@for (role of user.roles; track role) { <span>{{ roleLabel(role) }}</span> }</div></td>
+          <td><span class="account-status" [class.inactive]="user.active !== 1">{{ user.active === 1 ? 'Activa' : 'Inactiva' }}</span></td>
+          <td><div class="user-actions">
+            <button class="table-action-button" type="button" (click)="edit(user)" [disabled]="busy">Editar</button>
+            @if (user.accountType === 'LOCAL') {
+              <button class="table-action-button" type="button" (click)="beginReset(user)" [disabled]="busy || isSelf(user)" [title]="isSelf(user) ? 'Para tu cuenta usa Seguridad de cuenta' : 'Restablecer contraseña'">Restablecer contraseña</button>
+            }
+            <button class="table-action-button" [class.deactivate]="user.active === 1" [class.activate]="user.active !== 1" type="button" (click)="statusTarget = user" [disabled]="busy || isSelf(user)">{{ user.active === 1 ? 'Desactivar' : 'Activar' }}</button>
+          </div></td>
+        </tr>
+      }</tbody>
+    </table></div>
+    <app-pagination [totalItems]="total" [pageSize]="pageSize" [currentPage]="page" [disabled]="loading || busy" (pageChange)="loadUsers($event)" />
+  }
+</section>
+
+@if (editing; as user) {
+  <div class="error-modal-backdrop"><section class="password-reset-modal" role="dialog" aria-modal="true" aria-labelledby="edit-general-title">
+    <h2 id="edit-general-title">Editar administrador general</h2>
+    <p>Los roles y la contraseña se conservarán.</p>
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="form-grid">
+        <label>Identificación<input type="text" formControlName="nationalId" maxlength="10" /></label>
+        <label>Nombres<input type="text" formControlName="firstName" maxlength="100" /></label>
+        <label>Apellidos<input type="text" formControlName="lastName" maxlength="100" /></label>
+        <label>Correo<input type="email" formControlName="email" maxlength="150" /></label>
+      </div>
+      <div class="form-actions"><button class="secondary-button" type="button" (click)="closeDialogs()" [disabled]="busy">Cancelar</button><button class="primary-button" type="submit" [disabled]="busy">{{ busy ? 'Guardando…' : 'Guardar cambios' }}</button></div>
+    </form>
+  </section></div>
+}
+@if (resetting; as user) {
+  <div class="error-modal-backdrop"><section class="password-reset-modal" role="dialog" aria-modal="true" aria-labelledby="reset-general-title">
+    <h2 id="reset-general-title">Restablecer contraseña local</h2>
+    <p>{{ user.firstName }} {{ user.lastName }} deberá cambiar la temporal al ingresar. Se cerrarán sus sesiones actuales.</p>
+    <label>Contraseña temporal<input type="password" [(ngModel)]="password" autocomplete="new-password" minlength="12" [disabled]="busy" /></label>
+    <label>Confirmar contraseña temporal<input type="password" [(ngModel)]="confirmation" autocomplete="new-password" [disabled]="busy" /></label>
+    <div class="form-actions"><button class="secondary-button" type="button" (click)="closeDialogs()" [disabled]="busy">Cancelar</button><button class="primary-button" type="button" (click)="reset()" [disabled]="busy">{{ busy ? 'Restableciendo…' : 'Restablecer' }}</button></div>
+  </section></div>
+}
+@if (statusTarget; as user) {
+  <div class="error-modal-backdrop"><section class="password-reset-modal" role="alertdialog" aria-modal="true" aria-labelledby="status-general-title">
+    <h2 id="status-general-title">{{ user.active === 1 ? 'Desactivar acceso' : 'Activar acceso' }}</h2>
+    <p>¿Deseas {{ user.active === 1 ? 'desactivar' : 'activar' }} a {{ user.firstName }} {{ user.lastName }}?</p>
+    @if (user.active === 1) { <p>Se conservará su historial y se cerrarán sus sesiones.</p> }
+    <div class="form-actions"><button class="secondary-button" type="button" (click)="closeDialogs()" [disabled]="busy">Cancelar</button><button class="primary-button" type="button" (click)="confirmStatus()" [disabled]="busy">{{ busy ? 'Guardando…' : 'Confirmar' }}</button></div>
+  </section></div>
+}
+@if (errorMessage) {
+  <div class="error-modal-backdrop"><section class="error-modal" role="alertdialog" aria-modal="true" aria-labelledby="general-error-title">
+    <span class="error-modal-icon" aria-hidden="true">!</span><h2 id="general-error-title">No se pudo completar la acción</h2><p>{{ errorMessage }}</p>
+    <button class="primary-button" type="button" (click)="errorMessage = ''">Entendido</button>
+  </section></div>
+}

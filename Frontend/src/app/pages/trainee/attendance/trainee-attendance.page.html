@@ -1,0 +1,64 @@
+<main class="dashboard attendance-page">
+  <div class="page-heading">
+    <div><span class="eyebrow">ÁREA DE PRACTICANTE</span><h1>Horario de trabajo</h1><p>Registra tu entrada y salida de la jornada de hoy.</p></div>
+  </div>
+
+  @if (errorMessage) { <div class="feedback error-feedback" role="alert">{{ errorMessage }}</div> }
+  @if (successMessage) { <div class="feedback success-feedback" role="status">{{ successMessage }}</div> }
+
+  <section class="attendance-card" aria-labelledby="attendance-heading">
+    <div class="attendance-heading">
+      <div><span class="eyebrow">JORNADA DE HOY</span><h2 id="attendance-heading">{{ currentDate }}</h2><p>Registra cada paso para completar tu asistencia diaria.</p></div>
+      <span class="attendance-status" [class.in-progress]="status === 'IN_PROGRESS'" [class.completed]="status === 'COMPLETED'">{{ statusLabel }}</span>
+    </div>
+
+    <div class="attendance-times">
+      <div class="time-item" [class.complete]="attendance?.checkIn"><span class="time-icon entry-icon" aria-hidden="true">{{ attendance?.checkIn ? '✓' : '1' }}</span><div><small>Entrada</small><strong>{{ attendance ? formatTime(attendance.checkIn) : 'Pendiente' }}</strong></div></div>
+      <div class="time-divider" [class.complete]="attendance?.checkOut" aria-hidden="true"></div>
+      <div class="time-item" [class.complete]="attendance?.checkOut"><span class="time-icon exit-icon" aria-hidden="true">{{ attendance?.checkOut ? '✓' : '2' }}</span><div><small>Salida</small><strong>{{ attendance ? formatTime(attendance.checkOut) : 'Pendiente' }}</strong></div></div>
+    </div>
+
+    @if (status === 'NOT_STARTED') {
+      <div class="attendance-action"><p>Registra tu entrada al iniciar la jornada. El sistema usa la fecha y hora del servidor para guardar la asistencia.</p><button class="primary-button" type="button" (click)="registerCheckIn()" [disabled]="saving">{{ saving ? 'Registrando…' : 'Registrar entrada' }}</button></div>
+    } @else if (status === 'IN_PROGRESS') {
+      <div class="attendance-action"><p>Tu jornada está abierta. Registra la salida al terminar; al completar seis horas el sistema la cierra automáticamente.</p><button class="primary-button" type="button" (click)="registerCheckOut()" [disabled]="saving">{{ saving ? 'Registrando…' : 'Registrar salida' }}</button></div>
+    } @else {
+      <div class="attendance-complete"><strong>Jornada finalizada</strong><span>La entrada y salida de hoy quedaron registradas.</span></div>
+    }
+  </section>
+
+  <section class="attendance-history-card" aria-labelledby="attendance-history-title">
+    <div class="history-heading">
+      <div><span class="eyebrow">REGISTRO PERSONAL</span><h2 id="attendance-history-title">Jornadas anteriores</h2></div>
+      <span class="history-count">{{ totalAttendanceHistory }} {{ totalAttendanceHistory === 1 ? 'jornada' : 'jornadas' }}</span>
+    </div>
+    @if (historyError) { <div class="feedback error-feedback" role="alert">No se pudo cargar el historial: {{ historyError }}</div> }
+    @if (totalAttendanceHistory === 0) {
+      <div class="empty-state">
+        @if (historyLoading) { <span>Cargando jornadas…</span> }
+        @else { <strong>Aún no hay jornadas registradas</strong><span>Las asistencias registradas aparecerán aquí.</span> }
+      </div>
+    } @else {
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Total trabajado</th><th>Estado</th></tr></thead>
+          <tbody>
+            @for (day of visibleAttendanceHistory; track day.id) {
+              <tr>
+                <td class="date-cell">{{ displayDate(day.date) }}</td>
+                <td>{{ formatTime(day.checkIn) }}</td>
+                <td>{{ formatTime(day.checkOut) }}</td>
+                <td>{{ workedDuration(day) }}</td>
+                <td><span class="history-status" [class.completed]="day.checkOut">{{ day.checkOut ? 'Completada' : 'En curso' }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <app-pagination [totalItems]="totalAttendanceHistory" [pageSize]="pageSize" [currentPage]="currentPage" [disabled]="historyLoading" (pageChange)="loadHistory($event)" />
+      </div>
+    }
+  </section>
+
+  <section class="attendance-note"><strong>Ten en cuenta</strong><p>La asistencia debe registrarse en un día laborable y no feriado. Si no registras la salida, el Sistema la cierra automáticamente al cumplir seis horas.</p><small>El estado se actualiza automáticamente cada 30 segundos.</small></section>
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

@@ -1,0 +1,6 @@
+# Usar únicamente después de etiquetar ambas imágenes y comprobar compatibilidad del esquema.
+services:
+  backend:
+    image: control-ppp-backend:previous
+  frontend:
+    image: control-ppp-frontend:previous

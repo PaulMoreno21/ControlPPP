@@ -1,0 +1,102 @@
+<main class="dashboard admin-holidays-page">
+  <div class="page-heading">
+    <div><span class="eyebrow">ADMINISTRACIÓN GENERAL</span><h1>Administrar feriados</h1><p>Registra los días no laborables y controla cuáles bloquean el registro de asistencia.</p></div>
+  </div>
+
+  @if (errorMessage) { <div class="feedback error-feedback" role="alert">{{ errorMessage }}</div> }
+  @if (successMessage) { <div class="feedback success-feedback" role="status">{{ successMessage }}</div> }
+
+  @if (editingHoliday) {
+    <div class="modal-backdrop" role="presentation">
+      <section class="message-modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-holiday-title" (keydown.escape)="cancelEdit()">
+        <h2 id="edit-holiday-title">Editar feriado</h2>
+        <form [formGroup]="editForm" (ngSubmit)="saveEdit()" novalidate>
+          <fieldset [disabled]="savingEdit">
+            <div class="form-grid">
+              <label>Fecha
+                <span class="date-input-wrap">
+                  <input type="text" formControlName="date" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha del feriado a editar, formato día/mes/año" />
+                  <button class="calendar-button" type="button" aria-label="Abrir calendario de fecha a editar" (click)="openDatePicker(editDatePicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+                  <input #editDatePicker class="native-date-picker" type="date" [value]="pickerDate(editForm.controls.date.value)" (change)="setEditDateFromPicker($event)" tabindex="-1" aria-hidden="true" />
+                </span>
+                @if (editForm.controls.date.touched && editForm.controls.date.invalid) { <small class="field-error">Ingresa una fecha válida con formato dd/mm/yyyy.</small> }
+              </label>
+              <label>Descripción
+                <input type="text" formControlName="description" maxlength="150" />
+                @if (editForm.controls.description.touched && editForm.controls.description.invalid) { <small class="field-error">La descripción es obligatoria y admite hasta 150 caracteres.</small> }
+              </label>
+            </div>
+          </fieldset>
+          @if (editErrorMessage) { <div class="feedback error-feedback" role="alert">{{ editErrorMessage }}</div> }
+          <div class="modal-actions"><button class="secondary-button" type="button" (click)="cancelEdit()" [disabled]="savingEdit">Cancelar</button><button class="primary-button" type="submit" [disabled]="savingEdit">{{ savingEdit ? 'Guardando…' : 'Guardar cambios' }}</button></div>
+        </form>
+      </section>
+    </div>
+  }
+
+  @if (pendingDeleteHoliday; as holiday) {
+    <div class="modal-backdrop" role="presentation">
+      <section class="message-modal confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-holiday-title" aria-describedby="delete-holiday-message">
+        <h2 id="delete-holiday-title">Eliminar feriado</h2>
+        <p id="delete-holiday-message">¿Confirmas que deseas eliminar «{{ holiday.description }}» del {{ formatDate(holiday.date) }}? Esta acción no se puede deshacer.</p>
+        <div class="modal-actions"><button class="secondary-button" type="button" (click)="cancelDelete()" [disabled]="deletingHolidayId !== null">Cancelar</button><button class="delete-button" type="button" (click)="confirmDelete()" [disabled]="deletingHolidayId !== null || updatingHolidayId !== null">{{ deletingHolidayId === holiday.id ? 'Eliminando…' : 'Eliminar' }}</button></div>
+      </section>
+    </div>
+  }
+
+  <section class="registration-card" aria-labelledby="holiday-create-heading">
+    <div class="section-title"><span class="eyebrow">NUEVO FERIADO</span><h2 id="holiday-create-heading">Datos del feriado</h2></div>
+    <form [formGroup]="createForm" (ngSubmit)="createHoliday()" novalidate>
+      <div class="form-grid">
+        <label>Fecha
+          <span class="date-input-wrap">
+            <input type="text" formControlName="date" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha del feriado, formato día/mes/año" />
+            <button class="calendar-button" type="button" aria-label="Abrir calendario de fecha del feriado" (click)="openDatePicker(datePicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+            <input #datePicker class="native-date-picker" type="date" [value]="pickerDate(createForm.controls.date.value)" (change)="setDateFromPicker($event, 'date')" tabindex="-1" aria-hidden="true" />
+          </span>
+          @if (createForm.controls.date.touched && createForm.controls.date.hasError('required')) { <small class="field-error">Selecciona la fecha del feriado.</small> }
+          @else if (createForm.controls.date.touched && createForm.controls.date.hasError('dateFormat')) { <small class="field-error">Usa una fecha válida con formato dd/mm/yyyy.</small> }
+        </label>
+        <label>Descripción
+          <input type="text" formControlName="description" maxlength="150" placeholder="Ej. Feriado nacional" />
+          @if (createForm.controls.description.touched && createForm.controls.description.invalid) { <small class="field-error">La descripción es obligatoria y admite hasta 150 caracteres.</small> }
+        </label>
+      </div>
+      <div class="form-actions"><button class="primary-button" type="submit" [disabled]="saving">{{ saving ? 'Registrando…' : 'Registrar feriado' }}</button></div>
+    </form>
+  </section>
+
+  <section class="list-card" aria-labelledby="holidays-list-heading">
+    <div class="list-heading"><div><span class="eyebrow">CALENDARIO</span><h2 id="holidays-list-heading">Feriados registrados</h2></div><span class="item-count">{{ totalHolidays }} {{ totalHolidays === 1 ? 'feriado' : 'feriados' }}</span></div>
+    <form class="filter-form" [formGroup]="filterForm" (ngSubmit)="loadHolidays()">
+
+      <label>Desde <span class="date-input-wrap"><input type="text" formControlName="from" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha inicial, formato día/mes/año" /><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha inicial" (click)="openDatePicker(fromPicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #fromPicker class="native-date-picker" type="date" [value]="pickerDate(filterForm.controls.from.value)" (change)="setDateFromPicker($event, 'from')" tabindex="-1" aria-hidden="true" /></span>
+        @if (filterForm.controls.from.touched && filterForm.controls.from.hasError('required')) { <small class="field-error">Ingresa una fecha inicial.</small> }
+        @else if (filterForm.controls.from.touched && filterForm.controls.from.hasError('dateFormat')) { <small class="field-error">Usa una fecha válida con formato dd/mm/yyyy.</small> }
+      </label>
+      <label>Hasta <span class="date-input-wrap"><input type="text" formControlName="to" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha final, formato día/mes/año" /><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha final" (click)="openDatePicker(toPicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #toPicker class="native-date-picker" type="date" [value]="pickerDate(filterForm.controls.to.value)" (change)="setDateFromPicker($event, 'to')" tabindex="-1" aria-hidden="true" /></span>
+        @if (filterForm.controls.to.touched && filterForm.controls.to.hasError('required')) { <small class="field-error">Ingresa una fecha final.</small> }
+        @else if (filterForm.controls.to.touched && filterForm.controls.to.hasError('dateFormat')) { <small class="field-error">Usa una fecha válida con formato dd/mm/yyyy.</small> }
+      </label>
+      <button class="secondary-button" type="submit" [disabled]="loading">{{ querying ? 'Consultando…' : 'Consultar' }}</button>
+    </form>
+
+    @if (loading) { <div class="empty-state">Cargando feriados…</div> }
+    @else if (loadFailed) { <div class="empty-state"><strong>No se pudo cargar el calendario</strong><button class="secondary-button" type="button" (click)="loadHolidays()">Reintentar</button></div> }
+    @else if (totalHolidays === 0) { <div class="empty-state"><strong>No hay feriados en este rango</strong><span>Prueba con otro rango de fechas o registra un feriado nuevo.</span></div> }
+    @else {
+      <div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+        @for (holiday of visibleHolidays; track holiday.id) {
+          <tr>
+            <td>{{ formatDate(holiday.date) }}</td>
+            <td>{{ holiday.description }}</td>
+            <td><span class="holiday-status" [class.inactive]="!holiday.active">{{ holiday.active ? 'Activo' : 'Inactivo' }}</span></td>
+            <td><div class="row-actions"><button class="secondary-button" type="button" [disabled]="updatingHolidayId !== null || deletingHolidayId !== null || savingEdit" (click)="requestEdit(holiday)">Editar</button><button class="status-button" type="button" [class.activate]="!holiday.active" [disabled]="updatingHolidayId !== null || deletingHolidayId !== null" (click)="toggleStatus(holiday)">{{ updatingHolidayId === holiday.id ? 'Actualizando…' : holiday.active ? 'Desactivar' : 'Activar' }}</button><button class="delete-button" type="button" [disabled]="updatingHolidayId !== null || deletingHolidayId !== null" (click)="requestDelete(holiday)">{{ deletingHolidayId === holiday.id ? 'Eliminando…' : 'Eliminar' }}</button></div></td>
+          </tr>
+        }
+      </tbody></table></div>
+      <app-pagination [totalItems]="totalHolidays" [pageSize]="pageSize" [currentPage]="currentPage" [disabled]="loading" (pageChange)="loadHolidays(false, $event)" />
+    }
+  </section>
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

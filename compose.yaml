@@ -1,0 +1,84 @@
+name: control-ppp
+services:
+  oracle:
+    image: ${ORACLE_IMAGE:-gvenzl/oracle-free:23-slim-faststart}
+    environment:
+      ORACLE_PASSWORD_FILE: /run/secrets/oracle_admin_password
+      APP_USER: CTRLPPP
+      APP_USER_PASSWORD_FILE: /run/secrets/oracle_app_password
+    secrets: [oracle_admin_password, oracle_app_password]
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./deploy/oracle/01-schema.sh:/container-entrypoint-initdb.d/01-schema.sh:ro
+      - ./deploy/oracle/check-schema.sh:/operations/check-schema.sh:ro
+      - ./documentacion/CTRLPRAC_CREAR.sql:/schema/CTRLPRAC_CREAR.sql:ro
+    shm_size: 1gb
+    mem_limit: 3g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 90s
+    networks: [private]
+
+  backend:
+    image: control-ppp-backend:local
+    build: ./Backend
+    environment:
+      ORACLE_JDBC_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
+      ORACLE_USERNAME: CTRLPPP
+      APP_SESSION_COOKIE_SECURE: "true"
+      APP_HOLIDAY_SYNC_ENABLED: ${APP_HOLIDAY_SYNC_ENABLED:-true}
+      FERIADOS_API_KEY: ${FERIADOS_API_KEY:-}
+      APP_HOLIDAY_SYNC_ADMIN_ID: ${APP_HOLIDAY_SYNC_ADMIN_ID:-0}
+      APP_HOLIDAY_SYNC_CRON: "${APP_HOLIDAY_SYNC_CRON:-0 15 3 1 1 *}"
+      APP_SESSION_IDLE_TIMEOUT_SECONDS: ${APP_SESSION_IDLE_TIMEOUT_SECONDS:-900}
+      APP_SESSION_MAX_DURATION_SECONDS: ${APP_SESSION_MAX_DURATION_SECONDS:-28800}
+      RATE_LIMIT_TRUSTED_PROXY_IPS: ${PPP_PROXY_IP:-172.30.80.10}
+      JAVA_OPTS: -Xms128m -Xmx768m
+      TZ: America/Guayaquil
+    secrets: [oracle_app_password, jwt_secret]
+    depends_on:
+      oracle: {condition: service_healthy}
+    restart: unless-stopped
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    networks: [private]
+
+  frontend:
+    image: control-ppp-frontend:local
+    build: ./Frontend
+    ports:
+      - "${HTTPS_BIND:-0.0.0.0}:${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./secrets/tls:/etc/nginx/tls:ro
+    depends_on:
+      backend: {condition: service_healthy}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--no-check-certificate", "--spider", "https://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      private:
+        ipv4_address: ${PPP_PROXY_IP:-172.30.80.10}
+
+secrets:
+  oracle_admin_password: {file: ./secrets/oracle_admin_password}
+  oracle_app_password: {file: ./secrets/oracle_app_password}
+  jwt_secret: {file: ./secrets/jwt_secret}
+volumes:
+  oracle-data:
+networks:
+  private:
+    ipam:
+      config:
+        - subnet: ${PPP_SUBNET:-172.30.80.0/24}

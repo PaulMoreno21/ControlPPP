@@ -1,0 +1,38 @@
+<main class="dashboard security-page">
+  <div class="page-heading"><div><span class="eyebrow">CUENTA</span><h1>Seguridad de cuenta</h1><p>Cambia la contraseña de acceso de tu cuenta local.</p></div></div>
+
+  @if (errorMessage) {
+    <div class="error-modal-backdrop" role="presentation" (click)="dismissError()">
+      <section class="error-modal" role="alertdialog" aria-modal="true" aria-labelledby="password-error-title" (click)="$event.stopPropagation()">
+        <span class="error-modal-icon" aria-hidden="true">!</span><h2 id="password-error-title">No se pudo completar la acción</h2><p>{{ errorMessage }}</p>
+        <button class="primary-button" type="button" (click)="dismissError()">Entendido</button>
+      </section>
+    </div>
+  }
+
+  @if (successMessage) { <div class="success-message" role="status">{{ successMessage }}</div> }
+
+  <section class="security-card">
+    @if (isInstitutionalAccount) {
+      <div class="institutional-message"><strong>Cuenta institucional</strong><p>La contraseña se administra mediante el acceso institucional de ESPE. No se puede cambiar desde esta pantalla.</p></div>
+    } @else {
+      @if (auth.session()?.user.passwordChangeRequired) {
+        <div class="temporary-password-note"><strong>Debes actualizar tu contraseña</strong><p>Un administrador restableció tu acceso. Ingresa la contraseña temporal recibida y define una nueva para continuar.</p></div>
+      }
+      <form (ngSubmit)="changePassword()" autocomplete="off">
+        <label>Contraseña actual
+          <input type="password" name="currentPassword" [(ngModel)]="currentPassword" autocomplete="current-password" required />
+        </label>
+        <label>Nueva contraseña
+          <input type="password" name="newPassword" [(ngModel)]="newPassword" autocomplete="new-password" minlength="12" required />
+          <small>Usa al menos 12 caracteres.</small>
+        </label>
+        <label>Confirmar nueva contraseña
+          <input type="password" name="confirmPassword" [(ngModel)]="confirmPassword" autocomplete="new-password" required />
+        </label>
+        <button class="primary-button" type="submit" [disabled]="saving">{{ saving ? 'Guardando…' : 'Cambiar contraseña' }}</button>
+      </form>
+    }
+  </section>
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

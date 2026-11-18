@@ -1,0 +1,61 @@
+<main class="dashboard admin-laboratories-page">
+  <div class="page-heading">
+    <div><span class="eyebrow">ADMINISTRACIÓN GENERAL</span><h1>Administrar laboratorios</h1><p>Registra, edita o elimina laboratorios para organizar usuarios y asignaciones.</p></div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="modal-backdrop" role="presentation" (click)="errorMessage = ''">
+      <section class="message-modal error-modal" role="alertdialog" aria-modal="true" aria-labelledby="laboratory-error-title" aria-describedby="laboratory-error-message" (click)="$event.stopPropagation()">
+        <h2 id="laboratory-error-title">No se pudo completar la acción</h2>
+        <p id="laboratory-error-message">{{ errorMessage }}</p>
+        <button class="primary-button" type="button" autofocus (click)="errorMessage = ''">Entendido</button>
+      </section>
+    </div>
+  }
+  @if (successMessage) { <div class="feedback success-feedback" role="status">{{ successMessage }}</div> }
+
+  @if (pendingDeleteLaboratory; as laboratory) {
+    <div class="modal-backdrop" role="presentation">
+      <section class="message-modal confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-laboratory-title" aria-describedby="delete-laboratory-message">
+        <h2 id="delete-laboratory-title">Eliminar laboratorio</h2>
+        <p id="delete-laboratory-message">¿Confirmas que deseas eliminar “{{ laboratory.name }}”? Esta acción no se puede deshacer. Solo se eliminará si no tiene usuarios ni asignaciones asociadas.</p>
+        <div class="modal-actions"><button class="secondary-button" type="button" (click)="cancelDelete()" [disabled]="deletingLaboratoryId !== null">Cancelar</button><button class="danger-button" type="button" (click)="confirmDelete()" [disabled]="deletingLaboratoryId !== null || saving">{{ deletingLaboratoryId === laboratory.id ? 'Eliminando…' : 'Eliminar' }}</button></div>
+      </section>
+    </div>
+  }
+
+  <section #laboratoryForm class="registration-card" aria-labelledby="laboratory-heading">
+    <div class="section-title"><span class="eyebrow">{{ editingLaboratoryId === null ? 'NUEVO LABORATORIO' : 'EDICIÓN DE LABORATORIO' }}</span><h2 id="laboratory-heading">{{ editingLaboratoryId === null ? 'Datos del laboratorio' : 'Editar laboratorio' }}</h2></div>
+    <form [formGroup]="form" (ngSubmit)="saveLaboratory()" novalidate>
+      <div class="form-grid">
+        <label>Nombre del laboratorio
+          <input type="text" formControlName="name" maxlength="100" placeholder="Ej. Laboratorio de Software" />
+          @if (form.controls.name.touched && form.controls.name.invalid) { <small class="field-error">El nombre es obligatorio.</small> }
+        </label>
+        <label>Ubicación <span class="optional-label">(opcional)</span>
+          <input type="text" formControlName="location" maxlength="150" placeholder="Campus o edificio" />
+          @if (form.controls.location.touched && form.controls.location.invalid) { <small class="field-error">Ingrese una ubicacion.</small> }
+        </label>
+      </div>
+     
+      <div class="form-actions">
+        @if (editingLaboratoryId !== null) { <button class="secondary-button" type="button" (click)="cancelEdit()" [disabled]="saving">Cancelar</button> }
+        <button class="primary-button" type="submit" [disabled]="saving">{{ saving ? (editingLaboratoryId === null ? 'Registrando…' : 'Guardando…') : (editingLaboratoryId === null ? 'Registrar laboratorio' : 'Guardar cambios') }}</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="list-card" aria-labelledby="laboratories-list-heading">
+    <div class="list-heading"><div><span class="eyebrow">CATÁLOGO</span><h2 id="laboratories-list-heading">Laboratorios registrados</h2></div><div class="list-actions"><span class="item-count">{{ totalLaboratories }} {{ totalLaboratories === 1 ? 'laboratorio' : 'laboratorios' }}</span><button class="refresh-button" type="button" (click)="loadLaboratories(currentPage)" [disabled]="loading">{{ loading ? 'Actualizando…' : 'Actualizar' }}</button></div></div>
+    @if (loading) { <div class="empty-state">Cargando laboratorios…</div> }
+    @else if (loadFailed) { <div class="empty-state"><strong>No se pudo cargar el catálogo</strong><button class="primary-button" type="button" (click)="loadLaboratories()">Reintentar</button></div> }
+    @else if (totalLaboratories === 0) { <div class="empty-state"><strong>No hay laboratorios registrados</strong><span>Registra el primero un Laboratorio</span></div> }
+    @else {
+      <div class="table-scroll"><table><thead><tr><th>Nombre</th><th>Ubicación</th><th>Acciones</th></tr></thead><tbody>
+        @for (laboratory of visibleLaboratories; track laboratory.id) { <tr><td>{{ laboratory.name }}</td><td>{{ laboratory.location || '—' }}</td><td><div class="row-actions"><button class="row-action-button" type="button" (click)="editLaboratory(laboratory)" [disabled]="saving || deletingLaboratoryId !== null">Editar</button><button class="row-action-button delete" type="button" (click)="requestDelete(laboratory)" [disabled]="saving || deletingLaboratoryId !== null">Eliminar</button></div></td></tr> }
+      </tbody></table></div>
+      <app-pagination [totalItems]="totalLaboratories" [pageSize]="pageSize" [currentPage]="currentPage" [disabled]="loading" (pageChange)="loadLaboratories($event)" />
+    }
+  </section>
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

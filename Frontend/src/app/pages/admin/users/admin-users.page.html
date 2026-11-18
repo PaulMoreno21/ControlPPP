@@ -1,0 +1,139 @@
+<main class="dashboard admin-users-page">
+  <div class="page-heading">
+    <div><span class="eyebrow">{{ isGlobalAdmin ? 'ADMINISTRACIÓN GENERAL' : 'ADMINISTRACIÓN DE LABORATORIO' }}</span><h1>Usuarios y roles</h1><p>Registra cuentas, edita sus datos y activa o desactiva el acceso.</p></div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="error-modal-backdrop" role="presentation" (click)="dismissError()">
+      <section class="error-modal" role="alertdialog" aria-modal="true" aria-labelledby="error-modal-title" aria-describedby="error-modal-message" (click)="$event.stopPropagation()">
+        <span class="error-modal-icon" aria-hidden="true">!</span>
+        <h2 id="error-modal-title">No se pudo completar la acción</h2>
+        <p id="error-modal-message">{{ errorMessage }}</p>
+        <button class="primary-button" type="button" autofocus (click)="dismissError()">Entendido</button>
+      </section>
+    </div>
+  }
+  @if (resettingUser; as user) {
+    <div class="error-modal-backdrop" role="presentation" (click)="cancelPasswordReset()">
+      <section class="password-reset-modal" role="dialog" aria-modal="true" aria-labelledby="reset-password-title" (click)="$event.stopPropagation()">
+        <h2 id="reset-password-title">Restablecer contraseña local</h2>
+        <p>Define una contraseña temporal para {{ user.firstName }} {{ user.lastName }}. Al ingresar, deberá cambiarla.</p>
+        <label>Contraseña temporal<input type="password" [(ngModel)]="resetPassword" [ngModelOptions]="{ standalone: true }" autocomplete="new-password" minlength="12" /></label>
+        <label>Confirmar contraseña temporal<input type="password" [(ngModel)]="confirmResetPassword" [ngModelOptions]="{ standalone: true }" autocomplete="new-password" /></label>
+        <div class="form-actions"><button class="secondary-button" type="button" (click)="cancelPasswordReset()" [disabled]="resettingPassword">Cancelar</button><button class="primary-button" type="button" (click)="confirmPasswordReset()" [disabled]="resettingPassword">{{ resettingPassword ? 'Restableciendo…' : 'Restablecer' }}</button></div>
+      </section>
+    </div>
+  }
+  @if (successMessage) { <div class="feedback success-feedback" role="status">{{ successMessage }}</div> }
+
+  @if (isGlobalAdmin) {
+    <app-general-administrators (changed)="loadUsers(currentPage)" />
+  }
+
+  <section class="laboratory-card">
+    <label for="laboratory">{{ isGlobalAdmin ? 'Laboratorio donde se registrará el usuario' : 'Laboratorio asignado' }}</label>
+    @if (loadingLaboratories) { <span class="loading-hint">Cargando laboratorios…</span> }
+    @else if (laboratoriesFailed) { <span class="loading-hint">No se pudo cargar el catálogo. <button class="retry-button" type="button" (click)="loadLaboratories()">Reintentar</button></span> }
+    @else if (laboratories.length === 0) { <span class="loading-hint">No hay laboratorios disponibles para seleccionar.</span> }
+    @else {
+      <select id="laboratory" [ngModel]="selectedLaboratoryId" (ngModelChange)="onLaboratoryChange($event)" name="laboratory" [disabled]="saving || editingUserId !== null || (!isGlobalAdmin && laboratories.length === 1)" required>
+        <option [ngValue]="null" disabled>Selecciona un laboratorio</option>
+        @for (laboratory of laboratories; track laboratory.id) {
+          <option [ngValue]="laboratory.id">{{ laboratory.name }}{{ laboratory.location ? ' · ' + laboratory.location : '' }}</option>
+        }
+      </select>
+    }
+  </section>
+
+  <section #userEditor class="registration-card" aria-labelledby="registration-heading">
+    <div class="section-title"><span class="eyebrow">{{ editingUserId === null ? 'NUEVA CUENTA' : 'EDICIÓN DE CUENTA' }}</span><h2 id="registration-heading">{{ editingUserId === null ? 'Datos del usuario' : 'Editar datos del usuario' }}</h2></div>
+    @if (editingUserId !== null) { <p class="edit-hint">La contraseña actual se conservará. Puedes actualizar los roles de esta cuenta.</p> }
+    <form [formGroup]="form" (ngSubmit)="saveUser()" novalidate>
+      <div class="form-grid">
+        <label>Identificación
+          <input type="text" formControlName="nationalId" maxlength="10" autocomplete="off" placeholder="Cédula o Pasaporte" />
+          @if (form.controls.nationalId.touched && form.controls.nationalId.invalid) { <small class="field-error">{{ fieldError('nationalId') }}</small> }
+        </label>
+        <label>Nombres
+          <input type="text" formControlName="firstName" maxlength="100" autocomplete="given-name" placeholder="Nombres" />
+          @if (form.controls.firstName.touched && form.controls.firstName.invalid) { <small class="field-error">{{ fieldError('firstName') }}</small> }
+        </label>
+        <label>Apellidos
+          <input type="text" formControlName="lastName" maxlength="100" autocomplete="family-name" placeholder="Apellidos" />
+          @if (form.controls.lastName.touched && form.controls.lastName.invalid) { <small class="field-error">{{ fieldError('lastName') }}</small> }
+        </label>
+        <label>Correo electrónico
+          <input type="email" formControlName="email" maxlength="150" autocomplete="email" placeholder="usuario@example.com" />
+          @if (form.controls.email.touched && form.controls.email.invalid) { <small class="field-error">{{ fieldError('email') }}</small> }
+        </label>
+      </div>
+
+      @if (editingUserId === null) {
+      <fieldset class="account-type">
+        <legend>Tipo de cuenta</legend>
+        <label class="choice-card" [class.selected]="accountType === 'INSTITUTIONAL'">
+          <input type="radio" name="accountType" [checked]="accountType === 'INSTITUTIONAL'" (change)="setAccountType('INSTITUTIONAL')" />
+          <span><strong>Institucional</strong></span>
+        </label>
+        <label class="choice-card" [class.selected]="accountType === 'LOCAL'">
+          <input type="radio" name="accountType" [checked]="accountType === 'LOCAL'" (change)="setAccountType('LOCAL')" />
+          <span><strong>Local</strong></span>
+        </label>
+      </fieldset>
+
+      @if (accountType === 'LOCAL') {
+        <div class="password-grid">
+          <label>Contraseña
+            <div class="password-input"><input [type]="passwordVisible ? 'text' : 'password'" [(ngModel)]="password" [ngModelOptions]="{ standalone: true }" autocomplete="new-password" minlength="12" placeholder="Mínimo 12 caracteres" /><button type="button" (click)="passwordVisible = !passwordVisible">{{ passwordVisible ? 'Ocultar' : 'Mostrar' }}</button></div>
+          </label>
+          <label>Confirmar contraseña
+            <input type="password" [(ngModel)]="confirmPassword" [ngModelOptions]="{ standalone: true }" autocomplete="new-password" placeholder="Repite la contraseña" />
+          </label>
+        </div>
+      }
+      }
+
+      <fieldset class="role-section">
+        <legend>Roles de la cuenta</legend>
+
+        <div class="role-grid">
+          @for (role of availableRoles; track role.value) {
+            <label class="role-option" [class.role-selected]="hasRole(role.value)" [class.role-disabled]="isRoleDisabled(role.value)">
+              <input type="checkbox" [checked]="hasRole(role.value)" [disabled]="isRoleDisabled(role.value)" (change)="toggleRole(role.value, $any($event.target).checked)" />
+              <span><strong>{{ role.label }}</strong></span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <div class="form-actions">
+        @if (editingUserId !== null) { <button class="secondary-button" type="button" (click)="cancelEdit()" [disabled]="saving">Cancelar</button> }
+        <button class="primary-button" type="submit" [disabled]="saving || loadingLaboratories || laboratories.length === 0 || selectedLaboratoryId === null">{{ saving ? (editingUserId === null ? 'Registrando…' : 'Guardando…') : (editingUserId === null ? 'Registrar usuario' : 'Guardar cambios') }}</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="users-card" aria-labelledby="users-heading">
+    <div class="list-heading"><div><span class="eyebrow">CUENTAS DEL LABORATORIO</span><h2 id="users-heading">Usuarios registrados</h2></div><span class="user-count">{{ totalUsers }} {{ totalUsers === 1 ? 'usuario' : 'usuarios' }}</span></div>
+    @if (loadingUsers) { <div class="empty-state">Cargando usuarios…</div> }
+    @else if (selectedLaboratoryId === null) { <div class="empty-state"><strong>Selecciona un laboratorio</strong><span>{{ isGlobalAdmin ? 'Elige el laboratorio donde se registrará el usuario y cuyo listado quieres consultar.' : 'Elige uno de tus laboratorios asignados para consultar y administrar sus cuentas.' }}</span></div> }
+    @else if (usersFailed) { <div class="empty-state"><strong>No se pudo cargar la lista de usuarios</strong><button class="retry-button" type="button" (click)="loadUsers()">Reintentar</button></div> }
+    @else if (totalUsers === 0 && !userSearch.trim()) { <div class="empty-state"><strong>No hay usuarios asignados a este laboratorio</strong><span>Las cuentas registradas aparecerán aquí según los roles que tengan en el ámbito seleccionado.</span></div> }
+    @else if (totalUsers === 0) { <div class="empty-state"><strong>No se encontraron usuarios</strong><span>Verifica la identificación ingresada.</span></div> }
+    @else {
+      <label class="user-filter" for="user-identification-search">Buscar por identificación
+        <input id="user-identification-search" type="search" [(ngModel)]="userSearch" (ngModelChange)="loadUsers(1)" name="userSearch" maxlength="10" placeholder="Escribe la cédula o pasaporte" />
+      </label>
+      @if (filteredUsers.length === 0) { <div class="empty-state"><strong>No se encontraron usuarios</strong><span>Verifica la identificación ingresada.</span></div> }
+      @else {
+      <div class="table-scroll"><table><thead><tr><th>Identificación</th><th>Nombre</th><th>Correo</th><th>Tipo de cuenta</th><th>Roles</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+        @for (user of visibleUsers; track user.id) {
+          <tr><td>{{ user.nationalId }}</td><td>{{ user.firstName }} {{ user.lastName }}</td><td>{{ user.email }}</td><td>{{ user.accountType === 'LOCAL' ? 'Local' : 'Institucional' }}</td><td><div class="role-tags">@for (role of user.roles; track role) { <span>{{ roleLabel(role) }}</span> }</div></td><td><span class="account-status" [class.inactive]="user.active !== 1">{{ user.active === 1 ? 'Activa' : 'Inactiva' }}</span></td><td><div class="user-actions"><button class="table-action-button" type="button" (click)="editUser(user)" [disabled]="saving || updatingStatusUserId !== null">Editar</button>@if (user.accountType === 'LOCAL') { <button class="table-action-button" type="button" (click)="beginPasswordReset(user)" [disabled]="saving || updatingStatusUserId !== null">Restablecer contraseña</button> }<button class="table-action-button" [class.activate]="user.active !== 1" [class.deactivate]="user.active === 1" type="button" (click)="toggleUserStatus(user)" [disabled]="saving || updatingStatusUserId !== null">{{ updatingStatusUserId === user.id ? 'Actualizando…' : (user.active === 1 ? 'Desactivar' : 'Activar') }}</button></div></td></tr>
+        }
+      </tbody></table></div>
+      <app-pagination [totalItems]="totalUsers" [pageSize]="pageSize" [currentPage]="currentPage" [disabled]="loadingUsers" (pageChange)="loadUsers($event)" />
+      }
+    }
+  </section>
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

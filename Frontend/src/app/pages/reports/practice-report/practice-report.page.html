@@ -1,0 +1,98 @@
+<main class="dashboard practice-report-page">
+  <div class="page-heading">
+    <div><span class="eyebrow">{{ roleLabel }}</span><h1>Reportes</h1><p>Consulta asistencia y actividades dentro del alcance autorizado para tu cuenta.</p></div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="error-modal-backdrop" role="presentation" (click)="errorMessage = ''">
+      <section class="error-modal" role="alertdialog" aria-modal="true" aria-labelledby="report-error-title" (click)="$event.stopPropagation()">
+        <span class="error-modal-icon" aria-hidden="true">!</span>
+        <h2 id="report-error-title">No se pudo completar la consulta</h2>
+        <p>{{ errorMessage }}</p>
+        <button class="primary-button" type="button" (click)="errorMessage = ''">Entendido</button>
+      </section>
+    </div>
+  }
+
+  <section class="report-card" aria-labelledby="report-filter-title">
+    <div class="section-title"><div><span class="eyebrow">CONSULTA</span><h2 id="report-filter-title">Filtros del reporte</h2></div></div>
+
+    @if (loadingScope) { <div class="inline-loading" role="status">Cargando opciones de consulta…</div> }
+    @else if (scopeFailed) {
+      <div class="empty-state"><strong>No se pudieron cargar los filtros</strong><button class="secondary-button" type="button" (click)="loadScope(selectedLaboratoryId)">Reintentar</button></div>
+    } @else if (scope) {
+      <form class="filter-form" (ngSubmit)="loadReport()">
+        @if (scope.canChooseLaboratory) {
+          <label>Laboratorio
+            <select [ngModel]="selectedLaboratoryId" (ngModelChange)="changeLaboratory($event)" name="laboratory">
+              <option [ngValue]="null">Todos los laboratorios permitidos</option>
+              @for (laboratory of laboratories; track laboratory.id) {
+                <option [ngValue]="laboratory.id">{{ laboratory.name }}</option>
+              }
+            </select>
+          </label>
+        }
+        @if (scope.canChooseTrainee) {
+          <label>Practicante
+            <select [(ngModel)]="selectedTraineeId" name="trainee">
+              <option [ngValue]="null">Todos los practicantes permitidos</option>
+              @for (trainee of trainees; track trainee.id) {
+                <option [ngValue]="trainee.id">{{ trainee.name }} · {{ trainee.email }}</option>
+              }
+            </select>
+          </label>
+        } @else if (trainees.length === 1) {
+          <label>Practicante
+            <input type="text" [value]="trainees[0].name + ' · ' + trainees[0].email" readonly />
+          </label>
+        }
+        <label>Desde
+          <span class="date-input-wrap"><input type="text" [(ngModel)]="from" name="from" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha inicial, formato día/mes/año" /><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha inicial" (click)="openDatePicker(fromPicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #fromPicker class="native-date-picker" type="date" [value]="pickerDate(from)" (change)="setDateFromPicker($event, 'from')" tabindex="-1" aria-hidden="true" /></span>
+        </label>
+        <label>Hasta
+          <span class="date-input-wrap"><input type="text" [(ngModel)]="to" name="to" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha final, formato día/mes/año" /><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha final" (click)="openDatePicker(toPicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #toPicker class="native-date-picker" type="date" [value]="pickerDate(to)" (change)="setDateFromPicker($event, 'to')" tabindex="-1" aria-hidden="true" /></span>
+        </label>
+        <button class="primary-button" type="submit" [disabled]="loading || loadingScope">{{ loading ? 'Consultando…' : 'Consultar' }}</button>
+      </form>
+      <p class="scope-note">El informe muestra las actividades y sus estados. Las horas oficiales consideran solo las actividades aceptadas.</p>
+    }
+  </section>
+
+  @if (hasQueried) {
+    <section class="summary-grid" aria-label="Resumen del reporte">
+      <article class="summary-card"><span>Jornadas registradas</span><strong>{{ attendanceDays }}</strong></article>
+      <article class="summary-card"><span>Horas de asistencia</span><strong>{{ formatHours(attendanceHours) }}</strong></article>
+      <article class="summary-card"><span>Horas oficiales aceptadas</span><strong>{{ formatHours(acceptedActivityHours) }}</strong></article>
+    </section>
+
+    <section class="report-card" aria-labelledby="report-results-title">
+      <div class="list-heading"><div><span class="eyebrow">RESULTADOS</span><h2 id="report-results-title">Asistencia y actividades</h2></div><span class="item-count">{{ totalRows }} {{ totalRows === 1 ? 'jornada' : 'jornadas' }}</span></div>
+      @if (loading) { <div class="empty-state">Consultando reporte…</div> }
+      @else if (reportFailed) { <div class="empty-state"><strong>No se pudo cargar el reporte</strong><button class="secondary-button" type="button" (click)="loadReport(currentPage)">Reintentar</button></div> }
+      @else if (totalRows === 0) { <div class="empty-state"><strong>No hay registros en este rango</strong><span>Prueba con otras fechas o cambia los filtros.</span></div> }
+      @else {
+        <div class="table-scroll"><table>
+          <thead><tr><th>Fecha</th>@if (scope?.role !== 'PRACTICANTE') { <th>Practicante</th><th>Laboratorio</th> }<th>Entrada</th><th>Salida</th><th>Horas asistencia</th><th>Actividades</th><th>Horas oficiales</th></tr></thead>
+          <tbody>@for (row of rows; track row.traineeId + '-' + row.date) {
+            <tr>
+              <td class="date-cell">{{ formatDate(row.date) }}</td>
+              @if (scope?.role !== 'PRACTICANTE') { <td><strong>{{ row.traineeName }}</strong><small class="secondary-text">{{ row.traineeEmail }}</small></td><td>{{ row.laboratoryName || '—' }}</td> }
+              <td>{{ formatTime(row.checkIn) }}</td><td>{{ formatTime(row.checkOut) }}</td><td>{{ formatHours(row.attendanceHours) }}</td>
+              <td class="activity-cell">
+                @if (row.activities.length) {
+                  @for (activity of row.activities; track activity.id) {
+                    <div class="activity-item"><span>{{ activity.description }}</span><small>{{ formatHours(activity.hours) }} <span class="status-tag" [class.accepted]="activity.status === 'ACEPTADA'" [class.pending]="activity.status === 'ENVIADA'" [class.rejected]="activity.status === 'RECHAZADA'">{{ activityStatusLabel(activity.status) }}</span></small></div>
+                  }
+                } @else { <span class="no-data">Sin actividades</span> }
+              </td>
+              <td><strong>{{ formatHours(row.acceptedActivityHours) }}</strong></td>
+            </tr>
+          }</tbody>
+        </table></div>
+        <app-pagination [totalItems]="totalRows" [pageSize]="pageSize" [currentPage]="currentPage" [disabled]="loading" (pageChange)="loadReport($event)" />
+        <p class="result-note">Las horas oficiales excluyen actividades pendientes, rechazadas y borradores.</p>
+      }
+    </section>
+  }
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

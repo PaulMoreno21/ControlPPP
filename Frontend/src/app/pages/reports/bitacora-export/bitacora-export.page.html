@@ -1,0 +1,45 @@
+<main class="dashboard export-page">
+  @if (errorMessage) {
+    <div class="modal-backdrop" role="presentation" (click)="dismissError()">
+      <section class="error-modal" role="alertdialog" aria-modal="true" aria-labelledby="export-error-title" (click)="$event.stopPropagation()">
+        <span class="error-icon" aria-hidden="true">!</span>
+        <h2 id="export-error-title">No se pudo completar la exportación</h2>
+        <p>{{ errorMessage }}</p>
+        <button class="primary-button" type="button" (click)="dismissError()">Entendido</button>
+      </section>
+    </div>
+  }
+
+  <div class="page-heading">
+    <div><span class="eyebrow">BITÁCORA</span><h1>Exportar bitácora</h1><p>Descarga las actividades aceptadas dentro del periodo seleccionado.</p></div>
+  </div>
+
+  @if (successMessage) { <div class="success-message" role="status">{{ successMessage }}</div> }
+
+  @if (traineeId !== null) {
+    <section class="content-card own-report" aria-label="Bitácora propia"><span class="eyebrow">TU BITÁCORA</span><strong>{{ traineeName }}</strong><span>{{ traineeEmail }}</span></section>
+  } @else {
+    <section class="content-card empty-state" role="alert"><strong>No se pudo identificar tu cuenta de practicante.</strong></section>
+  }
+
+  <section class="content-card export-card" aria-labelledby="export-heading">
+    <div class="section-heading"><div><span class="eyebrow">ARCHIVO</span><h2 id="export-heading">Formato y periodo</h2></div></div>
+    @if (loadingRange) { <p class="note" role="status">Consultando el periodo de tu bitácora…</p> }
+    @if (rangeFailed) { <p class="note"><button class="primary-button" type="button" (click)="loadDefaultRange()" [disabled]="exporting">Reintentar periodo</button></p> }
+    <div class="form-grid">
+      <label>Desde
+        <span class="date-input-wrap"><input type="text" [(ngModel)]="from" name="from" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha inicial, formato día/mes/año" [disabled]="loadingRange || exporting" /><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha inicial" (click)="openDatePicker(fromPicker)" [disabled]="loadingRange || exporting"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #fromPicker class="native-date-picker" type="date" [value]="pickerDate(from)" (change)="setDateFromPicker($event, 'from')" tabindex="-1" aria-hidden="true" [disabled]="loadingRange || exporting" /></span>
+      </label>
+      <label>Hasta
+        <span class="date-input-wrap"><input type="text" [(ngModel)]="to" name="to" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha final, formato día/mes/año" [disabled]="loadingRange || exporting"/><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha final" (click)="openDatePicker(toPicker)" [disabled]="loadingRange || exporting"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #toPicker class="native-date-picker" type="date" [value]="pickerDate(to)" (change)="setDateFromPicker($event, 'to')" tabindex="-1" aria-hidden="true" [disabled]="loadingRange || exporting" /></span>
+      </label>
+      <label>Formato
+        <select [(ngModel)]="format" name="format" [disabled]="exporting">@for (item of formats; track item.value) { <option [value]="item.value">{{ item.label }}</option> }</select>
+      </label>
+    </div>
+    <p class="note">El archivo incluirá únicamente las actividades aceptadas por el tutor ESPE.</p>
+    <div class="form-actions"><button class="primary-button" type="button" (click)="export()" [disabled]="loadingRange || exporting || traineeId === null">{{ exporting ? 'Generando archivo…' : 'Exportar bitácora' }}</button></div>
+  </section>
+
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>

@@ -1,0 +1,7 @@
+package ec.edu.espe.practicas.service.exception;
+
+public class BusinessRuleViolationException extends RuntimeException {
+    public BusinessRuleViolationException(String message) {
+        super(message);
+    }
+}

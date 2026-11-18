@@ -1,0 +1,47 @@
+<main class="dashboard admin-audit-page">
+  <div class="page-heading">
+    <div><span class="eyebrow">ADMINISTRACIÓN GENERAL</span><h1>Auditoría del sistema</h1><p>Consulta las acciones registradas y quién las realizó en un rango de fechas.</p></div>
+  </div>
+
+  @if (errorMessage) { <div class="feedback error-feedback" role="alert">{{ errorMessage }}</div> }
+
+  <section class="audit-card" aria-labelledby="audit-filter-heading">
+    <div class="section-title"><span class="eyebrow">CONSULTA</span><h2 id="audit-filter-heading">Filtrar por fecha</h2></div>
+    <form class="filter-form" [formGroup]="filterForm" (ngSubmit)="loadEntries()">
+      <label>Desde
+        <span class="date-input-wrap"><input type="text" formControlName="from" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha inicial, formato día/mes/año" /><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha inicial" (click)="openDatePicker(fromPicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #fromPicker class="native-date-picker" type="date" [value]="pickerDate(filterForm.controls.from.value)" (change)="setFilterDateFromPicker($event, 'from')" tabindex="-1" aria-hidden="true" /></span>
+        @if (filterForm.controls.from.touched && filterForm.controls.from.hasError('required')) { <small class="field-error">Ingresa una fecha inicial.</small> }
+        @else if (filterForm.controls.from.touched && filterForm.controls.from.hasError('dateFormat')) { <small class="field-error">Usa una fecha válida con formato dd/mm/yyyy.</small> }
+      </label>
+      <label>Hasta
+        <span class="date-input-wrap"><input type="text" formControlName="to" inputmode="numeric" placeholder="dd/mm/yyyy" aria-label="Fecha final, formato día/mes/año" /><button class="calendar-button" type="button" aria-label="Abrir calendario para fecha final" (click)="openDatePicker(toPicker)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><input #toPicker class="native-date-picker" type="date" [value]="pickerDate(filterForm.controls.to.value)" (change)="setFilterDateFromPicker($event, 'to')" tabindex="-1" aria-hidden="true" /></span>
+        @if (filterForm.controls.to.touched && filterForm.controls.to.hasError('required')) { <small class="field-error">Ingresa una fecha final.</small> }
+        @else if (filterForm.controls.to.touched && filterForm.controls.to.hasError('dateFormat')) { <small class="field-error">Usa una fecha válida con formato dd/mm/yyyy.</small> }
+      </label>
+      <button class="primary-button" type="submit" [disabled]="loading">{{ querying ? 'Consultando…' : 'Consultar' }}</button>
+    </form>
+  </section>
+
+  <section class="audit-card" aria-labelledby="audit-list-heading">
+    <div class="list-heading"><div><span class="eyebrow">REGISTRO</span><h2 id="audit-list-heading">Acciones registradas</h2></div><span class="item-count">{{ totalEntries }} {{ totalEntries === 1 ? 'evento' : 'eventos' }}</span></div>
+    @if (loading) { <div class="empty-state">Cargando auditoría…</div> }
+    @else if (loadFailed) { <div class="empty-state"><strong>No se pudo consultar la auditoría</strong><button class="secondary-button" type="button" (click)="loadEntries()">Reintentar</button></div> }
+    @else if (totalEntries === 0) { <div class="empty-state"><strong>No hay eventos en este rango</strong><span>Prueba con otras fechas o vuelve a consultar más adelante.</span></div> }
+    @else {
+      <div class="table-scroll"><table><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Relacionado</th><th>Detalle</th></tr></thead><tbody>
+        @for (entry of visibleEntries; track entry.id) {
+          <tr>
+            <td class="date-cell">{{ formatDateTime(entry.occurredAt) }}</td>
+            <td><strong class="actor-name">{{ entry.actorName }}</strong></td>
+            <td><span class="action-tag">{{ actionLabel(entry.action) }}</span></td>
+            <td>{{ entityLabel(entry.entityName) }}</td>
+            <td class="details-cell">{{ entry.details || '—' }}</td>
+          </tr>
+        }
+      </tbody></table></div>
+      <app-pagination [totalItems]="totalEntries" [pageSize]="pageSize" [currentPage]="currentPage" [disabled]="loading" (pageChange)="loadEntries(false, $event)" />
+      <p class="result-note">Los resultados se muestran del más reciente al más antiguo.</p>
+    }
+  </section>
+  <footer class="dashboard-footer">Control PPP <span>·</span> Universidad de las Fuerzas Armadas ESPE</footer>
+</main>
