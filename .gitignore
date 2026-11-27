@@ -21,3 +21,4 @@ backups/
 *.fls
 Thumbs.db
 .DS_Store
+.scannerwork

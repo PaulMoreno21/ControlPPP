@@ -8,7 +8,7 @@
 .attendance-page { padding-top: 0; }
 .attendance-page .page-heading { align-items: center; }
 .attendance-page .page-heading h1 { margin-bottom: 6px; }
-.attendance-card, .attendance-note, .attendance-history-card { margin-bottom: 17px; padding: 22px; border: 1px solid #dce5de; border-radius: 10px; background: #fff; box-shadow: 0 4px 15px rgb(35 60 43 / 4%); }
+.attendance-card, .attendance-history-card { margin-bottom: 17px; padding: 22px; border: 1px solid #dce5de; border-radius: 10px; background: #fff; box-shadow: 0 4px 15px rgb(35 60 43 / 4%); }
 .attendance-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 21px; }
 .attendance-heading h2 { margin: 5px 0 0; color: #2d3b32; font-size: 1.5rem; }
 .attendance-heading p { margin: 6px 0 0; color: #718077; font-size: 0.9375rem; }
@@ -24,16 +24,13 @@
 .time-divider { height: 2px; background: #dfe7e0; }
 .time-divider.complete { background: #3c7e40; }
 .attendance-action { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 20px; }
-.attendance-action p, .attendance-note p { margin: 0; color: #66746a; font-size: 1rem; line-height: 1.6; }
+.attendance-action p { margin: 0; color: #66746a; font-size: 1rem; line-height: 1.6; }
 .primary-button, .secondary-button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 0 14px; border-radius: 7px; cursor: pointer; font: inherit; font-size: 1rem; font-weight: 700; }
 .primary-button { flex: 0 0 auto; color: #fff; border: 1px solid #3c7e40; background: #3c7e40; }
 .primary-button:disabled, .secondary-button:disabled { opacity: .6; cursor: wait; }
 .secondary-button { color: #47584d; border: 1px solid #d6e0d8; background: #fff; }
 .attendance-complete { display: grid; gap: 5px; margin-top: 19px; padding: 13px 15px; color: #fff; border: 1px solid #3c7e40; border-radius: 7px; background: #3c7e40; font-size: 1rem; }
 .attendance-complete span { font-size: 0.9375rem; }
-.attendance-note { background: #f9fbf9; box-shadow: none; }
-.attendance-note strong { display: block; margin-bottom: 6px; color: #35463a; font-size: 1rem; }
-.attendance-note small { display: block; margin-top: 7px; color: #859087; font-size: 0.875rem; }
 .history-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
 .history-heading h2 { margin: 5px 0 0; color: #2d3b32; font-size: 1.375rem; font-weight: 650; letter-spacing: -.02em; }
 .history-count { color: #718077; font-size: 0.9375rem; }
@@ -56,7 +53,7 @@ tbody tr:last-child td { border-bottom: 0; }
 @media (max-width: 600px) {
   .dashboard { padding: 24px 14px 18px; }
   .attendance-page .page-heading { align-items: flex-start; }
-  .attendance-card, .attendance-note, .attendance-history-card { padding: 15px; }
+  .attendance-card, .attendance-history-card { padding: 15px; }
   .attendance-times { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px; }
   .time-item { gap: 8px; }
   .time-icon { width: 34px; height: 34px; flex-basis: 34px; }
